@@ -17,6 +17,12 @@ Task tool (superpowers:code-reviewer):
   DESCRIPTION: [task summary]
 ```
 
+**Resource boundaries:**
+- Do not spawn subagents or parallel agents; escalate instead.
+- Prefer focused diff/file inspection over broad repo scans.
+- Do not run full-suite lint/typecheck/test unless targeted checks are insufficient for review.
+- Do not start watch modes, dev servers, or long-running background commands.
+
 **In addition to standard code quality concerns, the reviewer should check:**
 - Does each file have one clear responsibility with a well-defined interface?
 - Are units decomposed so they can be understood and tested independently?

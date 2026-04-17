@@ -26,6 +26,17 @@ Task tool (general-purpose):
 
     **Ask them now.** Raise any concerns before starting work.
 
+    ## Resource Boundaries
+
+    - Do not spawn subagents or parallel agents; escalate instead.
+    - Run targeted tests for this task first. Do not run full-suite lint/typecheck/test
+      unless the task requires it or targeted verification is insufficient.
+    - Do not start dev servers, watch modes, file watchers, or long-running background
+      commands unless explicitly required.
+    - If a background command is unavoidable, record its PID, explain why it was needed,
+      and stop it before reporting DONE.
+    - Avoid broad repo scans when focused file/symbol searches are enough.
+
     ## Your Job
 
     Once you're clear on requirements:

@@ -99,6 +99,40 @@ Use the least powerful model that can handle each role to conserve cost and incr
 - Touches multiple files with integration concerns → standard model
 - Requires design judgment or broad codebase understanding → most capable model
 
+## Resource Budget and Agent Cleanup
+
+This workflow optimizes quality by creating many fresh agents. Without explicit resource
+limits, complex plans can saturate CPU because multiple agents may run searches, tests,
+typechecks, linters, language servers, or MCP-backed tooling at the same time.
+
+**Default conservative budget:**
+- Execute one task at a time.
+- Max running subagent calls: **1**. Do not dispatch another agent while one is actively working.
+- Max open subagent sessions: **2** for the current task only (the task implementer plus the current reviewer/fixer). Close/reap reviewers immediately after their result is processed.
+- Keep at most one task implementer alive through the review/fix loop. Close/reap it after code quality approval or after the task is abandoned.
+- Do not start the next task until the current task's implementer and reviewers are closed/reaped or explicitly known idle.
+- If the runtime supports explicit agent cleanup, call it after every completed reviewer and after each completed task.
+
+**Hard limits:**
+- No nested subagents. Every implementer/reviewer prompt must say: "Do not spawn subagents or parallel agents; escalate instead."
+- No parallel implementers, no parallel reviewers for the same task, and no pre-dispatching the next task while review is still open.
+- Stop using this workflow as-is when expected invocations exceed ~12 (for example, more than 4 tasks with 3 agents each) or when review loops repeat twice on one task. Re-plan into smaller batches or switch to a single-owner/manual execution lane.
+- If system CPU is saturated, pause dispatching new agents. Wait for current work to finish, then continue in conservative mode or reduce the workflow to one implementer plus final review.
+
+**Command budget for all agents:**
+- Prefer targeted tests for the files/behavior touched by the current task.
+- Run full lint/typecheck/test only at task boundaries when necessary and at final verification; never let multiple agents run full-suite verification concurrently.
+- Use non-watch commands (`CI=1` where applicable). Do not run dev servers, file watchers, or long-running background commands unless the task explicitly requires them.
+- If a server/watch/background command is unavoidable, the agent must record its PID, explain why it was needed, and stop it before reporting DONE.
+- Avoid broad repo scans when focused file/symbol searches are enough.
+
+**Interruption and cleanup protocol:**
+- Maintain a small ledger while running this workflow: task, role, agent id/session id if available, status, started time, cleanup status, and any background PIDs the agent reports.
+- On user interruption, stop dispatching new agents immediately.
+- Do not kill processes by broad names like `codex`, `node`, `tmux`, or `omx`. Only close/terminate agents or PIDs that are recorded in the ledger and belong to this workflow/session/worktree.
+- If ownership is uncertain, report the suspected leftover agents/processes and leave them running rather than risking another user's or another session's work.
+- Before final completion, verify the ledger has no running agents, no unclosed reviewers, and no known background commands.
+
 ## Handling Implementer Status
 
 Implementer subagents report one of four statuses. Handle each appropriately:
@@ -238,6 +272,11 @@ Done!
 - Skip reviews (spec compliance OR code quality)
 - Proceed with unfixed issues
 - Dispatch multiple implementation subagents in parallel (conflicts)
+- Dispatch new agents while a previous subagent is still actively running
+- Leave completed reviewer agents open after their result is processed
+- Let subagents spawn their own subagents or parallel agents
+- Let multiple agents run full-suite tests/typechecks/lints concurrently
+- Kill broad process classes (`codex`, `node`, `tmux`, `omx`) instead of only recorded workflow-owned PIDs/agents
 - Make subagent read plan file (provide full text instead)
 - Skip scene-setting context (subagent needs to understand where task fits)
 - Ignore subagent questions (answer before letting them proceed)
