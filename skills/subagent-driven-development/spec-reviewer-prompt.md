@@ -34,6 +34,14 @@ Task tool (general-purpose):
     - Check for missing pieces they claimed to implement
     - Look for extra features they didn't mention
 
+    ## Resource Boundaries
+
+    - Do not spawn subagents or parallel agents; escalate instead.
+    - Prefer focused file/diff inspection over broad repo scans.
+    - Do not run full-suite lint/typecheck/test unless spec compliance cannot be
+      determined from code and targeted verification.
+    - Do not start watch modes, dev servers, or long-running background commands.
+
     ## Your Job
 
     Read the implementation code and verify:
