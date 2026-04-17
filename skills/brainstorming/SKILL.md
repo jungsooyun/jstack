@@ -28,8 +28,9 @@ You MUST create a task for each of these items and complete them in order:
 5. **Present design** — in sections scaled to their complexity, get user approval after each section
 6. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
 7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
-8. **User reviews written spec** — ask user to review the spec file before proceeding
-9. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+8. **Alternating model review loop** — GPT-5.4 review → apply accepted fixes → Opus review → apply accepted fixes, repeat until clean or blocked on user decision
+9. **User reviews written spec** — ask user to review the spec file before proceeding
+10. **Transition to implementation** — invoke writing-plans skill to create implementation plan
 
 ## Process Flow
 
@@ -44,6 +45,7 @@ digraph brainstorming {
     "User approves design?" [shape=diamond];
     "Write design doc" [shape=box];
     "Spec self-review\n(fix inline)" [shape=box];
+    "Alternating model review\n(GPT-5.4 then Opus)" [shape=box];
     "User reviews spec?" [shape=diamond];
     "Invoke writing-plans skill" [shape=doublecircle];
 
@@ -57,7 +59,8 @@ digraph brainstorming {
     "User approves design?" -> "Present design sections" [label="no, revise"];
     "User approves design?" -> "Write design doc" [label="yes"];
     "Write design doc" -> "Spec self-review\n(fix inline)";
-    "Spec self-review\n(fix inline)" -> "User reviews spec?";
+    "Spec self-review\n(fix inline)" -> "Alternating model review\n(GPT-5.4 then Opus)";
+    "Alternating model review\n(GPT-5.4 then Opus)" -> "User reviews spec?";
     "User reviews spec?" -> "Write design doc" [label="changes requested"];
     "User reviews spec?" -> "Invoke writing-plans skill" [label="approved"];
 }
@@ -122,6 +125,38 @@ After writing the spec document, look at it with fresh eyes:
 4. **Ambiguity check:** Could any requirement be interpreted two different ways? If so, pick one and make it explicit.
 
 Fix any issues inline. No need to re-review — just fix and move on.
+
+**Alternating Model Review Loop:**
+After self-review, get two independent read-only reviews and incorporate them in order:
+
+1. Ask GPT-5.4 to review the spec for blocking issues.
+2. Apply accepted fixes directly to the spec.
+3. Ask Opus to review the updated spec for blocking issues.
+4. Apply accepted fixes directly to the spec.
+5. Repeat from GPT-5.4 until both reviewers return no blocking issues, or a reviewer raises a product/architecture decision that requires the user.
+
+Only treat substantive issues as blocking: missing requirements, contradictions,
+ambiguous choices that would change implementation, scope creep, or decomposition
+problems. Ignore pure wording preferences unless they clarify a real ambiguity.
+
+Reviewers are read-only critics. They must not edit files, run implementation, spawn
+subagents, or start long-running commands. If the same issue cycles twice, stop and
+ask the user to decide.
+
+Use local commands when available, adapting paths/model aliases as needed:
+
+```bash
+# GPT-5.4 review (read-only Codex)
+codex exec -m gpt-5.4 -C "$PWD" -s read-only --skip-git-repo-check \
+  -o /tmp/spec-gpt54-review.md \
+  "Read <SPEC_FILE_PATH>. Review it for blocking planning issues only: missing requirements, contradictions, ambiguous implementation choices, scope/decomposition problems, and YAGNI violations. Return Status: Approved or Issues Found. Do not edit files."
+
+# Opus review (read-only Claude)
+claude -p --model opus --permission-mode plan --allowedTools "Read,Grep,Glob,LS" \
+  --add-dir "$PWD" \
+  "Read <SPEC_FILE_PATH>. Review it for blocking planning issues only: missing requirements, contradictions, ambiguous implementation choices, scope/decomposition problems, and YAGNI violations. Return Status: Approved or Issues Found. Do not edit files." \
+  > /tmp/spec-opus-review.md
+```
 
 **User Review Gate:**
 After the spec review loop passes, ask the user to review the written spec before proceeding:

@@ -131,6 +131,40 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 
+## Alternating Model Review Loop
+
+After self-review, get two independent read-only reviews and incorporate them in order:
+
+1. Ask GPT-5.4 to review the plan against the spec.
+2. Apply accepted fixes directly to the plan.
+3. Ask Opus to review the updated plan against the spec.
+4. Apply accepted fixes directly to the plan.
+5. Repeat from GPT-5.4 until both reviewers return no blocking issues, or a reviewer raises a product/architecture decision that requires the user.
+
+Only treat substantive issues as blocking: missed spec requirements, task ordering
+bugs, contradictions, vague or unbuildable steps, missing tests, incorrect commands,
+scope creep, or decomposition that would make implementation unsafe. Ignore pure
+wording preferences unless they prevent an engineer from following the plan.
+
+Reviewers are read-only critics. They must not edit files, run implementation, spawn
+subagents, or start long-running commands. If the same issue cycles twice, stop and
+ask the user to decide.
+
+Use local commands when available, adapting paths/model aliases as needed:
+
+```bash
+# GPT-5.4 review (read-only Codex)
+codex exec -m gpt-5.4 -C "$PWD" -s read-only --skip-git-repo-check \
+  -o /tmp/plan-gpt54-review.md \
+  "Read <PLAN_FILE_PATH> and <SPEC_FILE_PATH>. Review the plan for blocking implementation issues only: missed spec requirements, wrong task order, vague/unbuildable steps, missing tests, incorrect commands, scope creep, or unsafe decomposition. Return Status: Approved or Issues Found. Do not edit files."
+
+# Opus review (read-only Claude)
+claude -p --model opus --permission-mode plan --allowedTools "Read,Grep,Glob,LS" \
+  --add-dir "$PWD" \
+  "Read <PLAN_FILE_PATH> and <SPEC_FILE_PATH>. Review the plan for blocking implementation issues only: missed spec requirements, wrong task order, vague/unbuildable steps, missing tests, incorrect commands, scope creep, or unsafe decomposition. Return Status: Approved or Issues Found. Do not edit files." \
+  > /tmp/plan-opus-review.md
+```
+
 ## Execution Handoff
 
 After saving the plan, offer execution choice:
