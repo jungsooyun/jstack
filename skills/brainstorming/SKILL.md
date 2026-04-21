@@ -29,9 +29,9 @@ You MUST create a task for each of these items and complete them in order:
 6. **Present design** — in sections scaled to their complexity, get user approval after each section
 7. **Write design doc** — save to `docs/jstack/specs/YYYY-MM-DD-<topic>-design.md` and commit
 8. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
-9. **Alternating model review loop** — GPT-5.4 review → apply accepted fixes → Opus review → apply accepted fixes, repeat until clean or blocked on user decision
+9. **Peer review gate** — use `jstack:peer-review plan` on the spec, apply accepted fixes, repeat once if fixes materially change the spec
 10. **User reviews written spec** — ask user to review the spec file before proceeding
-11. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+11. **Transition to planning** — invoke writing-plans skill to create implementation plan
 
 ## Process Flow
 
@@ -47,7 +47,7 @@ digraph brainstorming {
     "User approves design?" [shape=diamond];
     "Write design doc" [shape=box];
     "Spec self-review\n(fix inline)" [shape=box];
-    "Alternating model review\n(GPT-5.4 then Opus)" [shape=box];
+    "Peer review gate\n(jstack:peer-review plan)" [shape=box];
     "User reviews spec?" [shape=diamond];
     "Invoke writing-plans skill" [shape=doublecircle];
 
@@ -62,14 +62,14 @@ digraph brainstorming {
     "User approves design?" -> "Present design sections" [label="no, revise"];
     "User approves design?" -> "Write design doc" [label="yes"];
     "Write design doc" -> "Spec self-review\n(fix inline)";
-    "Spec self-review\n(fix inline)" -> "Alternating model review\n(GPT-5.4 then Opus)";
-    "Alternating model review\n(GPT-5.4 then Opus)" -> "User reviews spec?";
+    "Spec self-review\n(fix inline)" -> "Peer review gate\n(jstack:peer-review plan)";
+    "Peer review gate\n(jstack:peer-review plan)" -> "User reviews spec?";
     "User reviews spec?" -> "Write design doc" [label="changes requested"];
     "User reviews spec?" -> "Invoke writing-plans skill" [label="approved"];
 }
 ```
 
-**The terminal state is invoking writing-plans.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is writing-plans.
+**The terminal state is invoking writing-plans after the peer-review gate and user approval.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY implementation-planning skill you invoke after brainstorming is writing-plans.
 
 ## The Process
 
@@ -137,44 +137,25 @@ After writing the spec document, look at it with fresh eyes:
 
 Fix any issues inline. No need to re-review — just fix and move on.
 
-**Alternating Model Review Loop:**
-After self-review, get two independent read-only reviews and incorporate them in order:
+**Peer Review Gate:**
+After self-review, use `jstack:peer-review plan` on the spec.
 
-1. Ask GPT-5.4 to review the spec for blocking issues.
-2. Apply accepted fixes directly to the spec.
-3. Ask Opus to review the updated spec for blocking issues.
-4. Apply accepted fixes directly to the spec.
-5. Repeat from GPT-5.4 until both reviewers return no blocking issues, or a reviewer raises a product/architecture decision that requires the user.
-
-Only treat substantive issues as blocking: missing requirements, contradictions,
-ambiguous choices that would change implementation, scope creep, or decomposition
-problems. Ignore pure wording preferences unless they clarify a real ambiguity.
-
-Reviewers are read-only critics. They must not edit files, run implementation, spawn
-subagents, or start long-running commands. If the same issue cycles twice, stop and
-ask the user to decide.
-
-Use local commands when available, adapting paths/model aliases as needed:
-
-```bash
-# GPT-5.4 review (read-only Codex)
-codex exec -m gpt-5.4 -C "$PWD" -s read-only --skip-git-repo-check \
-  -o /tmp/spec-gpt54-review.md \
-  "Read <SPEC_FILE_PATH>. Review it for blocking planning issues only: missing requirements, contradictions, ambiguous implementation choices, scope/decomposition problems, and YAGNI violations. Return Status: Approved or Issues Found. Do not edit files."
-
-# Opus review (read-only Claude)
-claude -p --model opus --permission-mode plan --allowedTools "Read,Grep,Glob,LS" \
-  --add-dir "$PWD" \
-  "Read <SPEC_FILE_PATH>. Review it for blocking planning issues only: missing requirements, contradictions, ambiguous implementation choices, scope/decomposition problems, and YAGNI violations. Return Status: Approved or Issues Found. Do not edit files." \
-  > /tmp/spec-opus-review.md
-```
+- In Codex, the reviewer is Claude.
+- In Claude Code, the reviewer is Codex.
+- The reviewer is read-only and must not edit files, run implementation, spawn subagents, or start long-running commands.
+- Only treat substantive issues as blocking: missing requirements, contradictions, ambiguous choices that would change implementation, scope creep, decomposition problems, unsafe sequencing, missing tests, or YAGNI violations.
+- Ignore pure wording preferences unless they clarify a real ambiguity.
+- Apply accepted fixes directly to the spec. Reject findings only with code/docs/evidence.
+- If accepted fixes materially change scope or architecture, run `jstack:peer-review plan` one more time on the updated spec.
+- If the same issue cycles twice, or the reviewer raises a product/architecture decision, stop and ask the user.
+- Update or add `## JSTACK REVIEW REPORT` with the peer-review artifact path when the active spec format includes review status.
 
 **User Review Gate:**
-After the spec review loop passes, ask the user to review the written spec before proceeding:
+After the spec peer-review gate passes, ask the user to review the written spec before proceeding:
 
 > "Spec written and committed to `<path>`. Please review it and let me know if you want to make any changes before we start writing out the implementation plan. If you approve the spec and want plan + implementation to proceed autonomously, say that explicitly."
 
-Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves.
+Wait for the user's response. If they request changes, make them and re-run the peer-review gate when the changes materially affect requirements, scope, architecture, tests, or sequencing. Only proceed once the user approves.
 
 **Implementation:**
 

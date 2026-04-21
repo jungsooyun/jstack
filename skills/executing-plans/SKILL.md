@@ -29,7 +29,22 @@ For each task:
 3. Run verifications as specified
 4. Mark as completed
 
-### Step 3: Complete Development
+### Step 3: Risk-Based Peer Review Challenge
+
+Before completing development, decide whether the implementation touched
+live/security/money/state-risk surfaces. Use `jstack:peer-review challenge` when
+the work affects:
+
+- Live trading, live-smoke, transfers, deposits, withdrawals, bridge execution, or signer paths
+- Authentication, callback signing, nonce/replay handling, permissions, secrets, or allowlists
+- Exchange adapter state mapping, order/account state machines, idempotency, recovery, or reconciliation
+- Deployment, migrations, irreversible data changes, or release blockers
+
+The challenge reviewer is read-only. Apply accepted fixes only after verifying each
+finding against code/tests/logs, then re-run targeted verification. Do not run live
+execution, spend funds, or change live positions without explicit user confirmation.
+
+### Step 4: Complete Development
 
 After all tasks complete and verified:
 - Announce: "I'm using the finishing-a-development-branch skill to complete this work."
@@ -67,4 +82,5 @@ After all tasks complete and verified:
 **Required workflow skills:**
 - **jstack:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
 - **jstack:writing-plans** - Creates the plan this skill executes
+- **jstack:peer-review** - REQUIRED for final adversarial challenge when live/security/money/state-risk surfaces changed
 - **jstack:finishing-a-development-branch** - Complete development after all tasks

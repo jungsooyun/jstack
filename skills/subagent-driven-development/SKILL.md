@@ -61,6 +61,8 @@ digraph process {
     "Read plan, extract all tasks with full text, note context, create TodoWrite" [shape=box];
     "More tasks remain?" [shape=diamond];
     "Dispatch final code reviewer subagent for entire implementation" [shape=box];
+    "Live/security/money/state risk?" [shape=diamond];
+    "Use jstack:peer-review challenge" [shape=box];
     "Use jstack:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
 
     "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Dispatch implementer subagent (./implementer-prompt.md)";
@@ -80,7 +82,10 @@ digraph process {
     "Mark task complete in TodoWrite" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
     "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
-    "Dispatch final code reviewer subagent for entire implementation" -> "Use jstack:finishing-a-development-branch";
+    "Dispatch final code reviewer subagent for entire implementation" -> "Live/security/money/state risk?";
+    "Live/security/money/state risk?" -> "Use jstack:peer-review challenge" [label="yes"];
+    "Use jstack:peer-review challenge" -> "Use jstack:finishing-a-development-branch";
+    "Live/security/money/state risk?" -> "Use jstack:finishing-a-development-branch" [label="no"];
 }
 ```
 
@@ -301,6 +306,21 @@ Done!
 - Dispatch fix subagent with specific instructions
 - Don't try to fix manually (context pollution)
 
+## Final Peer Review Challenge
+
+After final code review and before finishing the branch, decide whether the
+implementation touched live/security/money/state-risk surfaces. Use
+`jstack:peer-review challenge` when the work affects:
+
+- Live trading, live-smoke, transfers, deposits, withdrawals, bridge execution, or signer paths
+- Authentication, callback signing, nonce/replay handling, permissions, secrets, or allowlists
+- Exchange adapter state mapping, order/account state machines, idempotency, recovery, or reconciliation
+- Deployment, migrations, irreversible data changes, or release blockers
+
+The challenge reviewer is read-only. Apply accepted fixes only after verifying each
+finding against code/tests/logs, then re-run targeted verification. Do not run live
+execution, spend funds, or change live positions without explicit user confirmation.
+
 ## Integration
 
 **Required workflow skills:**
@@ -308,6 +328,7 @@ Done!
 - **jstack:writing-plans** - Creates the plan this skill executes
 - **jstack:requesting-code-review** - Code review template for reviewer subagents
 - **jstack:finishing-a-development-branch** - Complete development after all tasks
+- **jstack:peer-review** - REQUIRED for final adversarial challenge when live/security/money/state-risk surfaces changed
 
 **Subagents should use:**
 - **jstack:test-driven-development** - Subagents follow TDD for each task

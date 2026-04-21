@@ -27,6 +27,11 @@ grep -q "docs/jstack/specs" skills/brainstorming/SKILL.md || fail "brainstorming
 grep -q "Problem Framing Gate" skills/brainstorming/SKILL.md || fail "brainstorming must include Problem Framing Gate"
 grep -q "docs/jstack/plans" skills/writing-plans/SKILL.md || fail "writing-plans must write plans under docs/jstack/plans"
 grep -q "JSTACK REVIEW REPORT" skills/writing-plans/SKILL.md || fail "writing-plans must define JSTACK REVIEW REPORT"
+grep -q "jstack:peer-review plan" skills/brainstorming/SKILL.md || fail "brainstorming must route specs through peer-review"
+grep -q "jstack:peer-review plan" skills/writing-plans/SKILL.md || fail "writing-plans must route plans through peer-review"
+grep -q "jstack:peer-review challenge" skills/subagent-driven-development/SKILL.md || fail "subagent-driven-development must include risk-based peer-review challenge"
+grep -q "jstack:peer-review challenge" skills/executing-plans/SKILL.md || fail "executing-plans must include risk-based peer-review challenge"
+! rg -q "Alternating Model Review|GPT-5\\.4 review|Opus review" skills/brainstorming/SKILL.md skills/writing-plans/SKILL.md || fail "old alternating model review loop must not remain in planning gates"
 
 grep -q "jstack:" skills/writing-plans/SKILL.md || fail "writing-plans must reference jstack skill namespace"
 grep -q "jstack:" skills/subagent-driven-development/SKILL.md || fail "subagent-driven-development must reference jstack skill namespace"

@@ -154,39 +154,20 @@ evidence changes.
 Use `jstack:peer-review` for the outside-review rows. When running in Codex, the
 outside reviewer is Claude. When running in Claude Code, the outside reviewer is Codex.
 
-## Alternating Model Review Loop
+## Peer Review Gate
 
-After self-review, get two independent read-only reviews and incorporate them in order:
+After self-review, use `jstack:peer-review plan` on the implementation plan and
+spec before execution handoff.
 
-1. Ask GPT-5.4 to review the plan against the spec.
-2. Apply accepted fixes directly to the plan.
-3. Ask Opus to review the updated plan against the spec.
-4. Apply accepted fixes directly to the plan.
-5. Repeat from GPT-5.4 until both reviewers return no blocking issues, or a reviewer raises a product/architecture decision that requires the user.
-
-Only treat substantive issues as blocking: missed spec requirements, task ordering
-bugs, contradictions, vague or unbuildable steps, missing tests, incorrect commands,
-scope creep, or decomposition that would make implementation unsafe. Ignore pure
-wording preferences unless they prevent an engineer from following the plan.
-
-Reviewers are read-only critics. They must not edit files, run implementation, spawn
-subagents, or start long-running commands. If the same issue cycles twice, stop and
-ask the user to decide.
-
-Use local commands when available, adapting paths/model aliases as needed:
-
-```bash
-# GPT-5.4 review (read-only Codex)
-codex exec -m gpt-5.4 -C "$PWD" -s read-only --skip-git-repo-check \
-  -o /tmp/plan-gpt54-review.md \
-  "Read <PLAN_FILE_PATH> and <SPEC_FILE_PATH>. Review the plan for blocking implementation issues only: missed spec requirements, wrong task order, vague/unbuildable steps, missing tests, incorrect commands, scope creep, or unsafe decomposition. Return Status: Approved or Issues Found. Do not edit files."
-
-# Opus review (read-only Claude)
-claude -p --model opus --permission-mode plan --allowedTools "Read,Grep,Glob,LS" \
-  --add-dir "$PWD" \
-  "Read <PLAN_FILE_PATH> and <SPEC_FILE_PATH>. Review the plan for blocking implementation issues only: missed spec requirements, wrong task order, vague/unbuildable steps, missing tests, incorrect commands, scope creep, or unsafe decomposition. Return Status: Approved or Issues Found. Do not edit files." \
-  > /tmp/plan-opus-review.md
-```
+- In Codex, the reviewer is Claude.
+- In Claude Code, the reviewer is Codex.
+- The reviewer is read-only and must not edit files, run implementation, spawn subagents, or start long-running commands.
+- Only treat substantive issues as blocking: missed spec requirements, wrong task order, vague or unbuildable steps, missing tests, incorrect commands, scope creep, or unsafe decomposition.
+- Ignore pure wording preferences unless they prevent an engineer from following the plan.
+- Apply accepted fixes directly to the plan. Reject findings only with code/docs/evidence.
+- If accepted fixes materially change task ordering, ownership, tests, or execution lane, run `jstack:peer-review plan` one more time on the updated plan.
+- If the same issue cycles twice, or the reviewer raises a product/architecture decision, stop and ask the user.
+- Update `## JSTACK REVIEW REPORT` with the reviewer, status, findings summary, and artifact path.
 
 ## Execution Handoff
 
