@@ -15,8 +15,9 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Context:** This should be run in a dedicated worktree (created by brainstorming skill).
 
-**Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
+**Save plans to:** `docs/jstack/plans/YYYY-MM-DD-<feature-name>.md`
 - (User preferences for plan location override this default)
+- Read legacy `docs/superpowers/plans/` when continuing older work, but write new plans under `docs/jstack/plans/`.
 
 ## Scope Check
 
@@ -49,7 +50,7 @@ This structure informs the task decomposition. Each task should produce self-con
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use jstack:subagent-driven-development (recommended) or jstack:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** [One sentence describing what this builds]
 
@@ -131,6 +132,28 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 
+## JStack Review Report
+
+Every plan should include a living review status section. Add it before Execution
+Handoff and update it when peer review, adversarial review, verification, or live
+evidence changes.
+
+```markdown
+## JSTACK REVIEW REPORT
+
+| Check | Reviewer | Runs | Status | Findings | Artifact |
+|---|---|---:|---|---|---|
+| Spec Review | GPT/Claude | 0 | Pending | - | - |
+| Plan Review | GPT/Claude | 0 | Pending | - | - |
+| Peer Review | Claude/Codex | 0 | Pending | - | - |
+| Adversarial Review | Claude/Codex | 0 | Pending | - | - |
+| Verification | Local tests | 0 | Pending | - | - |
+| Live Evidence | Smoke/log/db | 0 | Pending | - | - |
+```
+
+Use `jstack:peer-review` for the outside-review rows. When running in Codex, the
+outside reviewer is Claude. When running in Claude Code, the outside reviewer is Codex.
+
 ## Alternating Model Review Loop
 
 After self-review, get two independent read-only reviews and incorporate them in order:
@@ -210,21 +233,21 @@ your recommendation in one sentence.
   and do not ask for another execution choice unless the choice is ambiguous or
   the plan hits the explicit-confirmation guard.
 - If Subagent-Driven is recommended, announce: "Plan complete and saved to
-  `docs/superpowers/plans/<filename>.md`. Continuing with subagent-driven
+  `docs/jstack/plans/<filename>.md`. Continuing with subagent-driven
   implementation because autonomous continuation was approved and the tasks are
   well isolated." Then use the REQUIRED SUB-SKILL:
-  superpowers:subagent-driven-development.
+  jstack:subagent-driven-development.
 - If Inline Execution is recommended, announce: "Plan complete and saved to
-  `docs/superpowers/plans/<filename>.md`. Continuing inline because autonomous
+  `docs/jstack/plans/<filename>.md`. Continuing inline because autonomous
   continuation was approved and this plan is small, tightly coupled, or
   environment-sensitive." Then use the REQUIRED SUB-SKILL:
-  superpowers:executing-plans.
+  jstack:executing-plans.
 
 **Manual handoff:**
 If autonomous continuation was not explicitly approved, offer execution choice
 with a recommendation:
 
-**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. I recommend `<Subagent-Driven|Inline Execution>` because `<one-sentence reason>`. Two execution options:**
+**"Plan complete and saved to `docs/jstack/plans/<filename>.md`. I recommend `<Subagent-Driven|Inline Execution>` because `<one-sentence reason>`. Two execution options:**
 
 **1. Subagent-Driven `<add "(recommended)" here only if this is the recommendation>`** - I dispatch a fresh subagent per task, review between tasks, fast iteration
 
@@ -233,9 +256,9 @@ with a recommendation:
 **Which approach?"**
 
 **If Subagent-Driven chosen:**
-- **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
+- **REQUIRED SUB-SKILL:** Use jstack:subagent-driven-development
 - Fresh subagent per task + two-stage review
 
 **If Inline Execution chosen:**
-- **REQUIRED SUB-SKILL:** Use superpowers:executing-plans
+- **REQUIRED SUB-SKILL:** Use jstack:executing-plans
 - Batch execution with checkpoints for review
