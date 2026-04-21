@@ -161,7 +161,7 @@ claude -p --model opus --permission-mode plan --allowedTools "Read,Grep,Glob,LS"
 **User Review Gate:**
 After the spec review loop passes, ask the user to review the written spec before proceeding:
 
-> "Spec written and committed to `<path>`. Please review it and let me know if you want to make any changes before we start writing out the implementation plan."
+> "Spec written and committed to `<path>`. Please review it and let me know if you want to make any changes before we start writing out the implementation plan. If you approve the spec and want plan + implementation to proceed autonomously, say that explicitly."
 
 Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves.
 

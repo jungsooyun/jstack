@@ -167,13 +167,68 @@ claude -p --model opus --permission-mode plan --allowedTools "Read,Grep,Glob,LS"
 
 ## Execution Handoff
 
-After saving the plan, offer execution choice:
+After saving and reviewing the plan, decide whether to continue automatically or
+ask for an execution choice.
 
-**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Two execution options:**
+### Choose Execution Lane
 
-**1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
+Before handing off, inspect the plan and choose the better execution lane. Do not
+default to subagents just because autonomous continuation was approved.
 
-**2. Inline Execution** - Execute tasks in this session using executing-plans, batch execution with checkpoints
+**Recommend Subagent-Driven when:**
+- The plan has 2-4 mostly independent tasks with clear file ownership.
+- Each task can be implemented, tested, reviewed, and committed on its own.
+- Spec compliance review is valuable because missing or extra behavior would be
+  costly.
+- The work touches multiple files or subsystems, but task boundaries are clean.
+- The expected implementation time is more than about 30 minutes.
+- The repo can tolerate isolated agents running targeted tests without requiring
+  shared local state.
+
+**Recommend Inline Execution when:**
+- The plan is one small task, one or two files, or a narrow bugfix.
+- Tasks are tightly coupled and require continuous local reasoning.
+- The work is primarily debugging, diagnosis, or test-output interpretation.
+- Subagent setup/review prompts would cost more than the implementation.
+- The expected subagent workflow would exceed about 12 invocations, or review
+  loops are likely to repeat because the work is ambiguous.
+- The environment is resource constrained, fragile, or depends on shared local
+  state, long-running services, live-smoke sessions, credentials, or external
+  side effects.
+
+**Stop for explicit confirmation before implementation when:**
+- The plan involves destructive operations, live trading/live-smoke execution,
+  external service changes, releases, credential changes, irreversible data
+  changes, or anything that could spend funds or change live positions.
+
+**If the choice is ambiguous:** ask the user which lane they want, and include
+your recommendation in one sentence.
+
+**Autopilot continuation:**
+- If the user already approved autonomous continuation from planning into
+  implementation, choose the recommended execution lane using the rules above
+  and do not ask for another execution choice unless the choice is ambiguous or
+  the plan hits the explicit-confirmation guard.
+- If Subagent-Driven is recommended, announce: "Plan complete and saved to
+  `docs/superpowers/plans/<filename>.md`. Continuing with subagent-driven
+  implementation because autonomous continuation was approved and the tasks are
+  well isolated." Then use the REQUIRED SUB-SKILL:
+  superpowers:subagent-driven-development.
+- If Inline Execution is recommended, announce: "Plan complete and saved to
+  `docs/superpowers/plans/<filename>.md`. Continuing inline because autonomous
+  continuation was approved and this plan is small, tightly coupled, or
+  environment-sensitive." Then use the REQUIRED SUB-SKILL:
+  superpowers:executing-plans.
+
+**Manual handoff:**
+If autonomous continuation was not explicitly approved, offer execution choice
+with a recommendation:
+
+**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. I recommend `<Subagent-Driven|Inline Execution>` because `<one-sentence reason>`. Two execution options:**
+
+**1. Subagent-Driven `<add "(recommended)" here only if this is the recommendation>`** - I dispatch a fresh subagent per task, review between tasks, fast iteration
+
+**2. Inline Execution `<add "(recommended)" here only if this is the recommendation>`** - Execute tasks in this session using executing-plans, batch execution with checkpoints
 
 **Which approach?"**
 
