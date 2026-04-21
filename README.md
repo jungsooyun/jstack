@@ -1,198 +1,219 @@
-# Superpowers
+# JStack
 
-Superpowers is a complete software development methodology for your coding agents, built on top of a set of composable skills and some initial instructions that make sure your agent uses them.
+JStack is a local skills workflow for Claude Code and OpenAI Codex. It is inspired
+by Garry Tan's [gstack](https://github.com/garrytan/gstack) and Jesse Vincent's
+[Superpowers](https://github.com/obra/superpowers): gstack's product/strategy and
+cross-model review ideas, plus Superpowers' disciplined planning, TDD, debugging,
+and subagent workflows.
 
-## How it works
+This is a personal fork and working system, not an upstream Superpowers release.
 
-It starts from the moment you fire up your coding agent. As soon as it sees that you're building something, it *doesn't* just jump into trying to write code. Instead, it steps back and asks you what you're really trying to do. 
+## What It Does
 
-Once it's teased a spec out of the conversation, it shows it to you in chunks short enough to actually read and digest. 
+JStack turns vague coding requests into an evidence-driven workflow:
 
-After you've signed off on the design, your agent puts together an implementation plan that's clear enough for an enthusiastic junior engineer with poor taste, no judgement, no project context, and an aversion to testing to follow. It emphasizes true red/green TDD, YAGNI (You Aren't Gonna Need It), and DRY. 
+1. `brainstorming` frames the real problem, scope, owner boundary, smallest useful
+   wedge, and success evidence before implementation.
+2. `peer-review` sends specs and plans to the opposite primary agent for read-only
+   review: Codex asks Claude, Claude asks Codex.
+3. `writing-plans` creates concrete TDD implementation plans under
+   `docs/jstack/plans/`.
+4. `subagent-driven-development` or `executing-plans` implements the plan with
+   review gates.
+5. `peer-review challenge` runs an adversarial final review only for
+   live/security/money/state-risk changes.
+6. `verification-before-completion` keeps completion claims tied to fresh evidence.
 
-Next up, once you say "go", it launches a *subagent-driven-development* process, having agents work through each engineering task, inspecting and reviewing their work, and continuing forward. It's not uncommon for Claude to be able to work autonomously for a couple hours at a time without deviating from the plan you put together.
-
-There's a bunch more to it, but that's the core of the system. And because the skills trigger automatically, you don't need to do anything special. Your coding agent just has Superpowers.
-
-
-## Sponsorship
-
-If Superpowers has helped you do stuff that makes money and you are so inclined, I'd greatly appreciate it if you'd consider [sponsoring my opensource work](https://github.com/sponsors/obra).
-
-Thanks! 
-
-- Jesse
-
-
-## Installation
-
-**Note:** Installation differs by platform. 
-
-### Claude Code Official Marketplace
-
-Superpowers is available via the [official Claude plugin marketplace](https://claude.com/plugins/superpowers)
-
-Install the plugin from Anthropic's official marketplace:
-
-```bash
-/plugin install superpowers@claude-plugins-official
-```
-
-### Claude Code (Superpowers Marketplace)
-
-The Superpowers marketplace provides Superpowers and some other related plugins for Claude Code.
-
-In Claude Code, register the marketplace first:
-
-```bash
-/plugin marketplace add obra/superpowers-marketplace
-```
-
-Then install the plugin from this marketplace:
-
-```bash
-/plugin install superpowers@superpowers-marketplace
-```
-
-### OpenAI Codex CLI
-
-- Open plugin search interface
-
-```bash
-/plugins
-```
-
-Search for Superpowers
-
-```bash
-superpowers
-```
-
-Select `Install Plugin`
-
-### OpenAI Codex App
-
-- In the Codex app, click on Plugins in the sidebar.
-- You should see `Superpowers` in the Coding section. 
-- Click the `+` next to Superpowers and follow the prompts.
-
-
-### Cursor (via Plugin Marketplace)
-
-In Cursor Agent chat, install from marketplace:
+The intended high-level flow is:
 
 ```text
-/add-plugin superpowers
+brainstorming
+-> peer-review plan/spec
+-> writing-plans
+-> peer-review plan
+-> implementation
+-> risk-based peer-review challenge
+-> verification
 ```
 
-or search for "superpowers" in the plugin marketplace.
+## Key Additions Over The Base
 
-### OpenCode
+- **Problem Framing Gate**: early office-hours-style check for bottleneck, scope,
+  repo ownership, assumptions, smallest evidence-producing wedge, and success evidence.
+- **Host-aware peer review**: Codex sessions use Claude as reviewer; Claude sessions
+  use Codex as reviewer.
+- **Adversarial challenge mode**: production-failure review for live trading,
+  transfers, signers, callbacks, exchange state, migrations, and release blockers.
+- **JSTACK REVIEW REPORT**: specs/plans/CURRENT files can track review status,
+  findings, artifacts, verification, and live evidence.
+- **Claude/Codex sync**: both primary hosts point at the same local skills source.
 
-Tell OpenCode:
+## Current Local Install
 
-```
-Fetch and follow instructions from https://raw.githubusercontent.com/obra/superpowers/refs/heads/main/.opencode/INSTALL.md
-```
-
-**Detailed docs:** [docs/README.opencode.md](docs/README.opencode.md)
-
-### GitHub Copilot CLI
+Canonical checkout:
 
 ```bash
-copilot plugin marketplace add obra/superpowers-marketplace
-copilot plugin install superpowers@superpowers-marketplace
+~/.codex/jstack
 ```
 
-### Gemini CLI
+Compatibility alias:
 
 ```bash
-gemini extensions install https://github.com/obra/superpowers
+~/.codex/superpowers -> ~/.codex/jstack
 ```
 
-To update:
+Codex skill discovery:
 
 ```bash
-gemini extensions update superpowers
+~/.codex/skills/jstack -> ~/.codex/jstack/skills
+~/.agents/skills/jstack -> ~/.codex/jstack/skills
 ```
 
-## The Basic Workflow
+Claude Code plugin:
 
-1. **brainstorming** - Activates before writing code. Refines rough ideas through questions, explores alternatives, presents design in sections for validation. Saves design document.
+```text
+jstack@jstack-dev enabled
+superpowers@claude-plugins-official disabled
+```
 
-2. **using-git-worktrees** - Activates after design approval. Creates isolated workspace on new branch, runs project setup, verifies clean test baseline.
+Check local sync status:
 
-3. **writing-plans** - Activates with approved design. Breaks work into bite-sized tasks (2-5 minutes each). Every task has exact file paths, complete code, verification steps.
+```bash
+scripts/sync-local-hosts.sh --dry-run
+```
 
-4. **subagent-driven-development** or **executing-plans** - Activates with plan. Dispatches fresh subagent per task with two-stage review (spec compliance, then code quality), or executes in batches with human checkpoints.
+Apply Codex/Agents symlinks:
 
-5. **test-driven-development** - Activates during implementation. Enforces RED-GREEN-REFACTOR: write failing test, watch it fail, write minimal code, watch it pass, commit. Deletes code written before tests.
+```bash
+scripts/sync-local-hosts.sh --apply
+```
 
-6. **requesting-code-review** - Activates between tasks. Reviews against plan, reports issues by severity. Critical issues block progress.
+## Fresh Install
 
-7. **finishing-a-development-branch** - Activates when tasks complete. Verifies tests, presents options (merge/PR/keep/discard), cleans up worktree.
+Clone:
 
-**The agent checks for relevant skills before any task.** Mandatory workflows, not suggestions.
+```bash
+git clone https://github.com/jungsooyun/jstack.git ~/.codex/jstack
+```
 
-## What's Inside
+Codex:
 
-### Skills Library
+```bash
+mkdir -p ~/.codex/skills ~/.agents/skills
+ln -s ~/.codex/jstack/skills ~/.codex/skills/jstack
+ln -s ~/.codex/jstack/skills ~/.agents/skills/jstack
+```
 
-**Testing**
-- **test-driven-development** - RED-GREEN-REFACTOR cycle (includes testing anti-patterns reference)
+Claude Code:
 
-**Debugging**
-- **systematic-debugging** - 4-phase root cause process (includes root-cause-tracing, defense-in-depth, condition-based-waiting techniques)
-- **verification-before-completion** - Ensure it's actually fixed
+```bash
+claude plugin marketplace add ~/.codex/jstack --scope user
+claude plugin install jstack@jstack-dev --scope user
+claude plugin disable superpowers@claude-plugins-official
+```
 
-**Collaboration** 
-- **brainstorming** - Socratic design refinement
-- **writing-plans** - Detailed implementation plans
-- **executing-plans** - Batch execution with checkpoints
-- **dispatching-parallel-agents** - Concurrent subagent workflows
-- **requesting-code-review** - Pre-review checklist
-- **receiving-code-review** - Responding to feedback
-- **using-git-worktrees** - Parallel development branches
-- **finishing-a-development-branch** - Merge/PR decision workflow
-- **subagent-driven-development** - Fast iteration with two-stage review (spec compliance, then code quality)
+Validate:
 
-**Meta**
-- **writing-skills** - Create new skills following best practices (includes testing methodology)
-- **using-superpowers** - Introduction to the skills system
+```bash
+claude plugin validate ~/.codex/jstack
+claude plugin validate ~/.codex/jstack/.claude-plugin/plugin.json
+tests/jstack-static/run.sh
+```
 
-## Philosophy
+Restart Claude Code and Codex after installation so their skill/plugin discovery
+refreshes.
 
-- **Test-Driven Development** - Write tests first, always
-- **Systematic over ad-hoc** - Process over guessing
-- **Complexity reduction** - Simplicity as primary goal
-- **Evidence over claims** - Verify before declaring success
+## Main Skills
 
-Read [the original release announcement](https://blog.fsck.com/2025/10/09/superpowers/).
+**Workflow**
+- `using-superpowers` - startup discipline and skill routing. Name retained for
+  compatibility with the upstream skill.
+- `brainstorming` - design/spec workflow with Problem Framing Gate and peer-review
+  spec gate.
+- `writing-plans` - concrete implementation plans with peer-review plan gate.
+- `subagent-driven-development` - one task at a time with implementer, spec review,
+  code-quality review, and risk-based final challenge.
+- `executing-plans` - inline/batch execution for smaller or tightly coupled work.
+- `peer-review` - opposite-agent review, adversarial challenge, artifacts, and triage.
 
-## Contributing
+**Engineering discipline**
+- `test-driven-development` - red/green/refactor discipline.
+- `systematic-debugging` - root-cause debugging before fixes.
+- `verification-before-completion` - evidence before completion claims.
+- `using-git-worktrees` - isolated workspaces.
+- `finishing-a-development-branch` - final branch/PR/merge/cleanup choices.
 
-The general contribution process for Superpowers is below. Keep in mind that we don't generally accept contributions of new skills and that any updates to skills must work across all of the coding agents we support.
+**Review handling**
+- `requesting-code-review`
+- `receiving-code-review`
+- `ask-claude` remains available as a legacy direct-Claude helper in the wider
+  local skills set, but `peer-review` is the preferred cross-agent path.
 
-1. Fork the repository
-2. Switch to the 'dev' branch
-3. Create a branch for your work
-4. Follow the `writing-skills` skill for creating and testing new and modified skills
-5. Submit a PR, being sure to fill in the pull request template.
+## Peer Review Behavior
 
-See `skills/writing-skills/SKILL.md` for the complete guide.
+Use:
+
+```text
+Use jstack:peer-review plan on docs/jstack/plans/<file>.md.
+Use jstack:peer-review review for the current diff.
+Use jstack:peer-review challenge focusing on replay/idempotency bugs.
+```
+
+Routing:
+
+- In Codex: reviewer is Claude Code CLI.
+- In Claude Code: reviewer is Codex CLI.
+
+Review output should be saved under:
+
+```text
+.jstack/artifacts/peer-review-<reviewer>-<mode>-<timestamp>.md
+```
+
+External findings are not orders. The active agent verifies each finding against
+code, tests, docs, logs, or live evidence before accepting it.
+
+## Verification
+
+Run local contract checks:
+
+```bash
+tests/jstack-static/run.sh
+git diff --check
+```
+
+Validate Claude manifests:
+
+```bash
+claude plugin validate ~/.codex/jstack
+claude plugin validate ~/.codex/jstack/.claude-plugin/plugin.json
+```
+
+Check plugin state:
+
+```bash
+claude plugin list
+```
 
 ## Updating
 
-Superpowers updates are somewhat coding-agent dependent, but are often automatic.
+```bash
+cd ~/.codex/jstack
+git pull
+scripts/sync-local-hosts.sh --apply
+```
+
+Restart Claude Code and Codex after updates that change plugin manifests or skill
+metadata.
+
+## Lineage
+
+JStack is built from a local fork of Superpowers and borrows workflow ideas from
+gstack. Attribution:
+
+- gstack: https://github.com/garrytan/gstack
+- Superpowers: https://github.com/obra/superpowers
 
 ## License
 
-MIT License - see LICENSE file for details
-
-## Community
-
-Superpowers is built by [Jesse Vincent](https://blog.fsck.com) and the rest of the folks at [Prime Radiant](https://primeradiant.com).
-
-- **Discord**: [Join us](https://discord.gg/35wsABTejz) for community support, questions, and sharing what you're building with Superpowers
-- **Issues**: https://github.com/obra/superpowers/issues
-- **Release announcements**: [Sign up](https://primeradiant.com/superpowers/) to get notified about new versions
+MIT License. See `LICENSE`.
