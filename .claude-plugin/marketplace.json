@@ -1,22 +1,20 @@
 {
   "name": "jstack-dev",
   "owner": {
-    "name": "Jesse Vincent",
-    "email": "jesse@fsck.com"
+    "name": "jerry"
   },
   "metadata": {
     "description": "Development marketplace for the local JStack skills library",
-    "version": "1.0.0"
+    "version": "5.0.8"
   },
   "plugins": [
     {
       "name": "jstack",
       "description": "Local skills library for Claude Code and Codex: planning, TDD, peer review, debugging, and delivery workflows",
-      "version": "5.0.7",
+      "version": "5.0.8",
       "source": "./",
       "author": {
-        "name": "Jesse Vincent",
-        "email": "jesse@fsck.com"
+        "name": "jerry"
       }
     }
   ]
