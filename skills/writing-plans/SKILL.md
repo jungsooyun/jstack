@@ -161,6 +161,12 @@ spec before execution handoff.
 
 - In Codex, the reviewer is Claude.
 - In Claude Code, the reviewer is Codex.
+- If the user asks for a fast Codex review or execution lane, include this
+  guidance in the plan handoff and any generated Codex reviewer command:
+  `-c 'service_tier="fast"'`. For lightweight planning/review tasks, also use
+  `-c 'model_reasoning_effort="low"'`; keep higher reasoning for adversarial,
+  security, live-risk, or release-blocking review unless the user explicitly
+  prioritizes speed over depth.
 - The reviewer is read-only and must not edit files, run implementation, spawn subagents, or start long-running commands.
 - Only treat substantive issues as blocking: missed spec requirements, wrong task order, vague or unbuildable steps, missing tests, incorrect commands, scope creep, or unsafe decomposition.
 - Ignore pure wording preferences unless they prevent an engineer from following the plan.

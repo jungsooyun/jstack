@@ -93,6 +93,13 @@ digraph process {
 
 Use the least powerful model that can handle each role to conserve cost and increase speed.
 
+When the user asks for a fast Codex execution path, add
+`-c 'service_tier="fast"'` to generated `codex exec` commands. For mechanical
+implementation tasks, fast probes, and lightweight reviews, pair it with
+`-c 'model_reasoning_effort="low"'`. Keep higher reasoning for architecture,
+security, live-risk, release-blocking, or broad integration tasks unless the user
+explicitly prioritizes speed over depth.
+
 **Mechanical implementation tasks** (isolated functions, clear specs, 1-2 files): use a fast, cheap model. Most implementation tasks are mechanical when the plan is well-specified.
 
 **Integration and judgment tasks** (multi-file coordination, pattern matching, debugging): use a standard model.

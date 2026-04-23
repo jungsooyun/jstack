@@ -62,6 +62,13 @@ YAGNI violations, and dependencies not reflected in the task order.
 
 ## Commands
 
+When the user asks for a fast Codex review path, add
+`-c 'service_tier="fast"'` to every `codex review` or `codex exec` command. For
+latency-sensitive probes or lightweight reviews, pair it with
+`-c 'model_reasoning_effort="low"'`. Keep `high` reasoning for adversarial,
+security, live-risk, or release-blocking reviews unless the user explicitly
+prioritizes speed over depth.
+
 Detect the repo and base branch:
 
 ```bash
@@ -82,6 +89,12 @@ For Codex reviewer auth, prefer a tiny read-only probe:
 codex exec "Reply with OK." -C "$REPO_ROOT" -s read-only -c 'model_reasoning_effort="low"' </dev/null
 ```
 
+Fast Codex reviewer auth probe:
+
+```bash
+codex exec "Reply with OK." -C "$REPO_ROOT" -s read-only -c 'service_tier="fast"' -c 'model_reasoning_effort="low"' </dev/null
+```
+
 For Claude reviewer auth, prefer:
 
 ```bash
@@ -94,10 +107,23 @@ Codex reviewer from Claude Code:
 codex review "<boundary and optional focus>" --base "$BASE" -c 'model_reasoning_effort="high"' --enable web_search_cached
 ```
 
+Fast Codex reviewer from Claude Code:
+
+```bash
+codex review "<boundary and optional focus>" --base "$BASE" -c 'service_tier="fast"' -c 'model_reasoning_effort="low"' --enable web_search_cached
+```
+
 Codex adversarial challenge from Claude Code:
 
 ```bash
 codex exec "<boundary plus challenge prompt>" -C "$REPO_ROOT" -s read-only -c 'model_reasoning_effort="high"' --enable web_search_cached --json
+```
+
+Fast Codex adversarial challenge from Claude Code, only when the user explicitly
+prioritizes speed over depth:
+
+```bash
+codex exec "<boundary plus challenge prompt>" -C "$REPO_ROOT" -s read-only -c 'service_tier="fast"' -c 'model_reasoning_effort="low"' --enable web_search_cached --json
 ```
 
 Claude reviewer from Codex:
