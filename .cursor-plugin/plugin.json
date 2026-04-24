@@ -2,7 +2,7 @@
   "name": "jstack",
   "displayName": "JStack",
   "description": "Local skills library: planning, TDD, peer review, debugging, and delivery workflows",
-  "version": "5.0.8",
+  "version": "5.0.9",
   "author": {
     "name": "jerry"
   },

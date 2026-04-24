@@ -1,41 +1,89 @@
 ---
 name: subagent-driven-development
-description: Use when executing implementation plans with independent tasks in the current session
+description: Use when executing implementation plans with agent-executable task slices in the current session
 ---
 
 # Subagent-Driven Development
 
-Execute plan by dispatching fresh subagent per task, with two-stage review after each: spec compliance review first, then code quality review.
+Execute plan by dispatching subagents for coherent task slices, with review gates sized to risk: spec compliance before code quality for high-risk or isolated slices; combined review for small low-risk slices.
 
-**Why subagents:** You delegate tasks to specialized agents with isolated context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. They should never inherit your session's context or history — you construct exactly what they need. This also preserves your own context for coordination work.
+**Why subagents:** You delegate task slices to specialized agents with curated context. By precisely crafting their instructions and context, you ensure they stay focused and succeed. They should never inherit your session's context or history — you construct exactly what they need. This also preserves your own context for coordination work.
 
-**Core principle:** Fresh subagent per task + two-stage review (spec then quality) = high quality, fast iteration
+**Core principle:** The orchestrator owns dependency judgment. Use the smallest isolated subagent slice that preserves correctness, then apply the review intensity the risk deserves.
 
 ## When to Use
 
 ```dot
 digraph when_to_use {
     "Have implementation plan?" [shape=diamond];
-    "Tasks mostly independent?" [shape=diamond];
+    "Can tasks be sliced for agent execution?" [shape=diamond];
     "Stay in this session?" [shape=diamond];
     "subagent-driven-development" [shape=box];
     "executing-plans" [shape=box];
     "Manual execution or brainstorm first" [shape=box];
 
-    "Have implementation plan?" -> "Tasks mostly independent?" [label="yes"];
+    "Have implementation plan?" -> "Can tasks be sliced for agent execution?" [label="yes"];
     "Have implementation plan?" -> "Manual execution or brainstorm first" [label="no"];
-    "Tasks mostly independent?" -> "Stay in this session?" [label="yes"];
-    "Tasks mostly independent?" -> "Manual execution or brainstorm first" [label="no - tightly coupled"];
+    "Can tasks be sliced for agent execution?" -> "Stay in this session?" [label="yes"];
+    "Can tasks be sliced for agent execution?" -> "Manual execution or brainstorm first" [label="no - tightly coupled/unclear"];
     "Stay in this session?" -> "subagent-driven-development" [label="yes"];
     "Stay in this session?" -> "executing-plans" [label="no - parallel session"];
 }
 ```
 
-**vs. Executing Plans (parallel session):**
+**vs. Executing Plans (inline or separate owner):**
 - Same session (no context switch)
-- Fresh subagent per task (no context pollution)
-- Two-stage review after each task: spec compliance first, then code quality
+- Fresh or grouped subagent slices selected by the orchestrator (controlled context)
+- Review gates after each slice, with two-stage review when risk warrants it
 - Faster iteration (no human-in-loop between tasks)
+
+## Orchestration Strategy
+
+Before dispatching any implementer, the orchestrator MUST read the whole plan and convert plan tasks into execution slices. A slice may be one task, part of a task, or a small group of dependent tasks.
+
+**Use one fresh subagent per task when:**
+- Tasks modify disjoint files or modules.
+- Each task has a clear independent test target.
+- The next task only depends on the previous task's committed public interface.
+- A fresh context reduces risk more than it loses continuity.
+
+**Group multiple tasks into one subagent slice when:**
+- Tasks share the same files and would cause merge churn if split.
+- Later steps require implementation details from earlier steps, not just public interfaces.
+- The task boundary is artificial and splitting would force repeated rediscovery.
+- The combined slice remains small enough for one agent to understand and verify.
+
+**Split a plan task into smaller slices when:**
+- It touches unrelated files or subsystems.
+- It has separable tests that can pass independently.
+- The implementer would need to hold too many details in context.
+- Reviewers would struggle to distinguish spec compliance from code quality.
+
+**Switch to inline execution instead when:**
+- Almost every task depends on hidden state from the previous one.
+- The work is diagnosis/debugging where test output changes the next step.
+- The environment depends on live services, credentials, long-running processes, or shared local state.
+- Slicing would create more coordination cost than implementation cost.
+
+Record the chosen slices in TodoWrite with enough detail to show why each slice is isolated, grouped, or split.
+
+## Review Intensity
+
+Pick the review gate per slice. Do not skip review; choose the right size.
+
+**Full two-stage review (default for non-trivial work):**
+- Spec compliance reviewer first.
+- Code quality reviewer only after spec compliance passes.
+- Use for high-risk behavior, security/auth/live/money/state surfaces, cross-module changes, public APIs, data migrations, or any slice where over/under-building would be costly.
+
+**Combined review (allowed for low-risk slices):**
+- One reviewer checks both spec compliance and code quality in a single pass.
+- Use only for small, low-risk slices touching 1-2 files with targeted tests and no public API, migration, security, live, money, or state-machine risk.
+- The reviewer prompt must explicitly check: missing requirements, extra scope, test quality, maintainability, file responsibility, and targeted verification evidence.
+
+**Final review remains required:**
+- After all slices complete, run a final code review for the entire implementation.
+- If live/security/money/state risk exists, run `jstack:peer-review challenge` before finishing.
 
 ## The Process
 
@@ -43,45 +91,43 @@ digraph when_to_use {
 digraph process {
     rankdir=TB;
 
-    subgraph cluster_per_task {
-        label="Per Task";
-        "Dispatch implementer subagent (./implementer-prompt.md)" [shape=box];
+    subgraph cluster_per_slice {
+        label="Per Slice";
+        "Dispatch implementer subagent for slice (./implementer-prompt.md)" [shape=box];
         "Implementer subagent asks questions?" [shape=diamond];
         "Answer questions, provide context" [shape=box];
         "Implementer subagent implements, tests, commits, self-reviews" [shape=box];
-        "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [shape=box];
-        "Spec reviewer subagent confirms code matches spec?" [shape=diamond];
-        "Implementer subagent fixes spec gaps" [shape=box];
-        "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [shape=box];
-        "Code quality reviewer subagent approves?" [shape=diamond];
-        "Implementer subagent fixes quality issues" [shape=box];
-        "Mark task complete in TodoWrite" [shape=box];
+        "Choose review intensity" [shape=diamond];
+        "Full two-stage review\n(spec then quality)" [shape=box];
+        "Combined low-risk review" [shape=box];
+        "Reviewer approves?" [shape=diamond];
+        "Implementer subagent fixes issues" [shape=box];
+        "Mark slice complete in TodoWrite" [shape=box];
     }
 
-    "Read plan, extract all tasks with full text, note context, create TodoWrite" [shape=box];
-    "More tasks remain?" [shape=diamond];
+    "Read plan, map dependencies, create execution slices, create TodoWrite" [shape=box];
+    "More slices remain?" [shape=diamond];
     "Dispatch final code reviewer subagent for entire implementation" [shape=box];
     "Live/security/money/state risk?" [shape=diamond];
     "Use jstack:peer-review challenge" [shape=box];
     "Use jstack:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
 
-    "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Dispatch implementer subagent (./implementer-prompt.md)";
-    "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
+    "Read plan, map dependencies, create execution slices, create TodoWrite" -> "Dispatch implementer subagent for slice (./implementer-prompt.md)";
+    "Dispatch implementer subagent for slice (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
     "Implementer subagent asks questions?" -> "Answer questions, provide context" [label="yes"];
-    "Answer questions, provide context" -> "Dispatch implementer subagent (./implementer-prompt.md)";
+    "Answer questions, provide context" -> "Dispatch implementer subagent for slice (./implementer-prompt.md)";
     "Implementer subagent asks questions?" -> "Implementer subagent implements, tests, commits, self-reviews" [label="no"];
-    "Implementer subagent implements, tests, commits, self-reviews" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)";
-    "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" -> "Spec reviewer subagent confirms code matches spec?";
-    "Spec reviewer subagent confirms code matches spec?" -> "Implementer subagent fixes spec gaps" [label="no"];
-    "Implementer subagent fixes spec gaps" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [label="re-review"];
-    "Spec reviewer subagent confirms code matches spec?" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [label="yes"];
-    "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" -> "Code quality reviewer subagent approves?";
-    "Code quality reviewer subagent approves?" -> "Implementer subagent fixes quality issues" [label="no"];
-    "Implementer subagent fixes quality issues" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [label="re-review"];
-    "Code quality reviewer subagent approves?" -> "Mark task complete in TodoWrite" [label="yes"];
-    "Mark task complete in TodoWrite" -> "More tasks remain?";
-    "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
-    "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
+    "Implementer subagent implements, tests, commits, self-reviews" -> "Choose review intensity";
+    "Choose review intensity" -> "Full two-stage review\n(spec then quality)" [label="normal/high risk"];
+    "Choose review intensity" -> "Combined low-risk review" [label="small/low risk"];
+    "Full two-stage review\n(spec then quality)" -> "Reviewer approves?";
+    "Combined low-risk review" -> "Reviewer approves?";
+    "Reviewer approves?" -> "Implementer subagent fixes issues" [label="no"];
+    "Implementer subagent fixes issues" -> "Choose review intensity" [label="re-review"];
+    "Reviewer approves?" -> "Mark slice complete in TodoWrite" [label="yes"];
+    "Mark slice complete in TodoWrite" -> "More slices remain?";
+    "More slices remain?" -> "Dispatch implementer subagent for slice (./implementer-prompt.md)" [label="yes"];
+    "More slices remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
     "Dispatch final code reviewer subagent for entire implementation" -> "Live/security/money/state risk?";
     "Live/security/money/state risk?" -> "Use jstack:peer-review challenge" [label="yes"];
     "Use jstack:peer-review challenge" -> "Use jstack:finishing-a-development-branch";
@@ -118,21 +164,21 @@ limits, complex plans can saturate CPU because multiple agents may run searches,
 typechecks, linters, language servers, or MCP-backed tooling at the same time.
 
 **Default conservative budget:**
-- Execute one task at a time.
+- Execute one slice at a time.
 - Max running subagent calls: **1**. Do not dispatch another agent while one is actively working.
-- Max open subagent sessions: **2** for the current task only (the task implementer plus the current reviewer/fixer). Close/reap reviewers immediately after their result is processed.
+- Max open subagent sessions: **2** for the current slice only (the slice implementer plus the current reviewer/fixer). Close/reap reviewers immediately after their result is processed.
 - Keep at most one task implementer alive through the review/fix loop. Close/reap it after code quality approval or after the task is abandoned.
-- Do not start the next task until the current task's implementer and reviewers are closed/reaped or explicitly known idle.
-- If the runtime supports explicit agent cleanup, call it after every completed reviewer and after each completed task.
+- Do not start the next slice until the current slice's implementer and reviewers are closed/reaped or explicitly known idle.
+- If the runtime supports explicit agent cleanup, call it after every completed reviewer and after each completed slice.
 
 **Hard limits:**
 - No nested subagents. Every implementer/reviewer prompt must say: "Do not spawn subagents or parallel agents; escalate instead."
-- No parallel implementers, no parallel reviewers for the same task, and no pre-dispatching the next task while review is still open.
-- Stop using this workflow as-is when expected invocations exceed ~12 (for example, more than 4 tasks with 3 agents each) or when review loops repeat twice on one task. Re-plan into smaller batches or switch to a single-owner/manual execution lane.
+- No parallel implementers, no parallel reviewers for the same slice, and no pre-dispatching the next slice while review is still open.
+- Stop using this workflow as-is when expected invocations exceed ~12 (for example, too many slices with separate implementer/reviewer cycles) or when review loops repeat twice on one slice. Re-plan into smaller batches or switch to a single-owner/manual execution lane.
 - If system CPU is saturated, pause dispatching new agents. Wait for current work to finish, then continue in conservative mode or reduce the workflow to one implementer plus final review.
 
 **Command budget for all agents:**
-- Prefer targeted tests for the files/behavior touched by the current task.
+- Prefer targeted tests for the files/behavior touched by the current slice.
 - Run full lint/typecheck/test only at task boundaries when necessary and at final verification; never let multiple agents run full-suite verification concurrently.
 - Use non-watch commands (`CI=1` where applicable). Do not run dev servers, file watchers, or long-running background commands unless the task explicitly requires them.
 - If a server/watch/background command is unavoidable, the agent must record its PID, explain why it was needed, and stop it before reporting DONE.
@@ -149,7 +195,7 @@ typechecks, linters, language servers, or MCP-backed tooling at the same time.
 
 Implementer subagents report one of four statuses. Handle each appropriately:
 
-**DONE:** Proceed to spec compliance review.
+**DONE:** Proceed to the chosen review gate for the slice.
 
 **DONE_WITH_CONCERNS:** The implementer completed the work but flagged doubts. Read the concerns before proceeding. If the concerns are about correctness or scope, address them before review. If they're observations (e.g., "this file is getting large"), note them and proceed to review.
 
@@ -169,18 +215,26 @@ Implementer subagents report one of four statuses. Handle each appropriately:
 - `./spec-reviewer-prompt.md` - Dispatch spec compliance reviewer subagent
 - `./code-quality-reviewer-prompt.md` - Dispatch code quality reviewer subagent
 
+For combined low-risk review, use one reviewer with both the slice requirements and the diff range. The prompt must say:
+
+```text
+Review this low-risk implementation slice for both spec compliance and code quality.
+Check for missing requirements, extra scope, test quality, maintainability, file
+responsibility, and targeted verification evidence. Findings first with file:line
+references. Do not edit files. Do not spawn subagents.
+```
+
 ## Example Workflow
 
 ```
 You: I'm using Subagent-Driven Development to execute this plan.
 
 [Read plan file once: docs/jstack/plans/feature-plan.md]
-[Extract all 5 tasks with full text and context]
-[Create TodoWrite with all tasks]
+[Map dependencies, convert tasks into execution slices, create TodoWrite]
 
-Task 1: Hook installation script
+Slice 1: Hook installation script
 
-[Get Task 1 text and context (already extracted)]
+[Get Slice 1 text and context (already extracted)]
 [Dispatch implementation subagent with full task text + context]
 
 Implementer: "Before I begin - should the hook be installed at user or system level?"
@@ -200,11 +254,11 @@ Spec reviewer: ✅ Spec compliant - all requirements met, nothing extra
 [Get git SHAs, dispatch code quality reviewer]
 Code reviewer: Strengths: Good test coverage, clean. Issues: None. Approved.
 
-[Mark Task 1 complete]
+[Mark Slice 1 complete]
 
-Task 2: Recovery modes
+Slice 2: Recovery modes
 
-[Get Task 2 text and context (already extracted)]
+[Get Slice 2 text and context (already extracted)]
 [Dispatch implementation subagent with full task text + context]
 
 Implementer: [No questions, proceeds]
@@ -234,7 +288,7 @@ Implementer: Extracted PROGRESS_INTERVAL constant
 [Code reviewer reviews again]
 Code reviewer: ✅ Approved
 
-[Mark Task 2 complete]
+[Mark Slice 2 complete]
 
 ...
 
@@ -249,7 +303,7 @@ Done!
 
 **vs. Manual execution:**
 - Subagents follow TDD naturally
-- Fresh context per task (no confusion)
+- Fresh or intentionally grouped context per slice (less confusion)
 - Parallel-safe (subagents don't interfere)
 - Subagent can ask questions (before AND during work)
 
@@ -266,13 +320,13 @@ Done!
 
 **Quality gates:**
 - Self-review catches issues before handoff
-- Two-stage review: spec compliance, then code quality
+- Review intensity matches slice risk
 - Review loops ensure fixes actually work
 - Spec compliance prevents over/under-building
 - Code quality ensures implementation is well-built
 
 **Cost:**
-- More subagent invocations (implementer + 2 reviewers per task)
+- More subagent invocations than inline execution
 - Controller does more prep work (extracting all tasks upfront)
 - Review loops add iterations
 - But catches issues early (cheaper than debugging later)
@@ -292,11 +346,12 @@ Done!
 - Make subagent read plan file (provide full text instead)
 - Skip scene-setting context (subagent needs to understand where task fits)
 - Ignore subagent questions (answer before letting them proceed)
-- Accept "close enough" on spec compliance (spec reviewer found issues = not done)
+- Accept "close enough" on spec compliance (reviewer found issues = not done)
 - Skip review loops (reviewer found issues = implementer fixes = review again)
 - Let implementer self-review replace actual review (both are needed)
-- **Start code quality review before spec compliance is ✅** (wrong order)
-- Move to next task while either review has open issues
+- **Start code quality review before spec compliance is approved in full two-stage mode** (wrong order)
+- Use combined review for high-risk or public API/security/live/money/state-machine slices
+- Move to next slice while review has open issues
 
 **If subagent asks questions:**
 - Answer clearly and completely

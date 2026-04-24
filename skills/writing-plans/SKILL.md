@@ -7,13 +7,13 @@ description: Use when you have a spec or requirements for a multi-step task, bef
 
 ## Overview
 
-Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+Write implementation plans at the fidelity the work needs. The default is comprehensive: assume the engineer has zero context for our codebase and questionable taste. Document what they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
 
 Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
 
 **Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
-**Context:** This should be run in a dedicated worktree (created by brainstorming skill).
+**Context:** This should usually run in a dedicated worktree prepared before planning. If no worktree exists, use `jstack:using-git-worktrees` before implementation unless the user or repo instructions choose the current workspace.
 
 **Save plans to:** `docs/jstack/plans/YYYY-MM-DD-<feature-name>.md`
 - (User preferences for plan location override this default)
@@ -43,6 +43,26 @@ This structure informs the task decomposition. Each task should produce self-con
 - "Run the tests and make sure they pass" - step
 - "Commit" - step
 
+## Plan Fidelity Tiers
+
+Choose the lowest fidelity that still lets an agent implement safely. The user should not need to choose this unless the risk is ambiguous; make the call and state it in the plan.
+
+**Tier 1: Micro Plan**
+- Use for approved micro-designs, one-file changes, tiny bug fixes, copy/config updates, or narrow tests.
+- Include exact files, behavior, targeted test command, acceptance criteria, and commit step.
+- Do not require full code blocks for every implementation line when the change is obvious from existing code; include interfaces, examples, or diffs only where ambiguity would cause mistakes.
+
+**Tier 2: Interface-Level Plan**
+- Use for most brownfield work where exact final code depends on nearby implementation details.
+- Specify file responsibilities, function/type signatures, data flow, test cases, commands, and task ordering.
+- Include code blocks for new public interfaces, test skeletons, migrations, complex conditionals, or API contracts. Do not invent large bodies of code that will become stale before implementation.
+
+**Tier 3: Full-Code Plan**
+- Use for greenfield modules, high-risk behavior, cross-cutting changes, security/live/money/state surfaces, or when multiple agents will execute isolated tasks with little shared context.
+- Include complete code snippets for each step that changes code, exact commands, expected failures/passes, and commit commands.
+
+If unsure between tiers, choose the higher fidelity when mistakes would be expensive, and the lower fidelity when stale pseudo-code would be more dangerous than helpful.
+
 ## Plan Document Header
 
 **Every plan MUST start with this header:**
@@ -50,7 +70,7 @@ This structure informs the task decomposition. Each task should produce self-con
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use jstack:subagent-driven-development (recommended) or jstack:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use jstack:subagent-driven-development (recommended) or jstack:executing-plans to implement this plan by executable slices. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** [One sentence describing what this builds]
 
@@ -58,10 +78,14 @@ This structure informs the task decomposition. Each task should produce self-con
 
 **Tech Stack:** [Key technologies/libraries]
 
+**Plan Fidelity:** [Micro Plan | Interface-Level Plan | Full-Code Plan, with one-sentence reason]
+
 ---
 ```
 
 ## Task Structure
+
+Use this structure at the selected fidelity tier. Full-code plans should include complete snippets for code-changing steps. Interface-level and micro plans may use signatures, test skeletons, exact commands, acceptance criteria, and focused examples instead of full implementation bodies when that is more accurate.
 
 ````markdown
 ### Task N: [Component Name]
@@ -106,17 +130,17 @@ git commit -m "feat: add specific feature"
 
 ## No Placeholders
 
-Every step must contain the actual content an engineer needs. These are **plan failures** — never write them:
+Every step must contain the actual content an engineer needs at the selected fidelity tier. These are **plan failures** — never write them:
 - "TBD", "TODO", "implement later", "fill in details"
 - "Add appropriate error handling" / "add validation" / "handle edge cases"
 - "Write tests for the above" (without actual test code)
 - "Similar to Task N" (repeat the code — the engineer may be reading tasks out of order)
-- Steps that describe what to do without showing how (code blocks required for code steps)
+- Steps that describe what to do without showing how at the selected fidelity tier
 - References to types, functions, or methods not defined in any task
 
 ## Remember
 - Exact file paths always
-- Complete code in every step — if a step changes code, show the code
+- Match code detail to the chosen fidelity tier; full-code plans require complete code blocks, lower tiers require enough concrete detail to prevent wrong implementation
 - Exact commands with expected output
 - DRY, YAGNI, TDD, frequent commits
 
@@ -129,6 +153,8 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 **2. Placeholder scan:** Search your plan for red flags — any of the patterns from the "No Placeholders" section above. Fix them.
 
 **3. Type consistency:** Do the types, method signatures, and property names you used in later tasks match what you defined in earlier tasks? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
+
+**4. Fidelity fit:** Did you choose the right tier? If the plan includes large invented code for brownfield internals, lower the fidelity. If the plan leaves high-risk behavior underspecified, raise the fidelity.
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 
@@ -236,7 +262,7 @@ with a recommendation:
 
 **"Plan complete and saved to `docs/jstack/plans/<filename>.md`. I recommend `<Subagent-Driven|Inline Execution>` because `<one-sentence reason>`. Two execution options:**
 
-**1. Subagent-Driven `<add "(recommended)" here only if this is the recommendation>`** - I dispatch a fresh subagent per task, review between tasks, fast iteration
+**1. Subagent-Driven `<add "(recommended)" here only if this is the recommendation>`** - I dispatch subagents for isolated or grouped task slices, review between slices, fast iteration
 
 **2. Inline Execution `<add "(recommended)" here only if this is the recommendation>`** - Execute tasks in this session using executing-plans, batch execution with checkpoints
 
@@ -244,7 +270,7 @@ with a recommendation:
 
 **If Subagent-Driven chosen:**
 - **REQUIRED SUB-SKILL:** Use jstack:subagent-driven-development
-- Fresh subagent per task + two-stage review
+- Orchestrator-selected task slices + risk-sized review gates
 
 **If Inline Execution chosen:**
 - **REQUIRED SUB-SKILL:** Use jstack:executing-plans

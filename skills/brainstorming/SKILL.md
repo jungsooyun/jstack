@@ -17,6 +17,20 @@ Do NOT invoke any implementation skill, write any code, scaffold any project, or
 
 Every project goes through this process. A todo list, a single-function utility, a config change — all of them. "Simple" projects are where unexamined assumptions cause the most wasted work. The design can be short (a few sentences for truly simple projects), but you MUST present it and get approval.
 
+## Micro-Design Lane
+
+Use this lane for small, low-risk changes where a full spec document would add more friction than clarity: narrow bug fixes, one-file behavior changes, small config updates, copy changes, or simple UI tweaks.
+
+Micro-design still requires approval before implementation, but the design can be 5-10 lines in the conversation:
+- Problem: what changes and why
+- Approach: files/behavior affected
+- Tests/verification: how success will be proven
+- Risk: why a full spec is not needed
+
+Do NOT use the micro-design lane for architecture changes, cross-repo work, security/auth, live operations, money movement, migrations, releases, ambiguous product behavior, or any change that needs multiple independent tasks. Those require the full spec flow.
+
+After user approval of a micro-design, transition directly to writing-plans. The plan may be correspondingly small, but it must still identify the execution lane and verification.
+
 ## Checklist
 
 You MUST create a task for each of these items and complete them in order:
@@ -27,11 +41,13 @@ You MUST create a task for each of these items and complete them in order:
 4. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
 5. **Propose 2-3 approaches** — with trade-offs and your recommendation
 6. **Present design** — in sections scaled to their complexity, get user approval after each section
-7. **Write design doc** — save to `docs/jstack/specs/YYYY-MM-DD-<topic>-design.md` and commit
-8. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
-9. **Peer review gate** — use `jstack:peer-review plan` on the spec, apply accepted fixes, repeat once if fixes materially change the spec
-10. **User reviews written spec** — ask user to review the spec file before proceeding
-11. **Transition to planning** — invoke writing-plans skill to create implementation plan
+7. **Choose design lane** — micro-design for small low-risk changes, full spec for everything else
+8. **Full spec lane only: write design doc** — save to `docs/jstack/specs/YYYY-MM-DD-<topic>-design.md` and commit
+9. **Full spec lane only: spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
+10. **Full spec lane only: peer review gate** — use `jstack:peer-review plan` on the spec, apply accepted fixes, repeat once if fixes materially change the spec
+11. **Full spec lane only: user reviews written spec** — ask user to review the spec file before proceeding
+12. **Prepare implementation workspace** — if implementation will proceed now, use `jstack:using-git-worktrees` unless the active repo/user instructions explicitly choose the current workspace
+13. **Transition to planning** — invoke writing-plans skill to create implementation plan
 
 ## Process Flow
 
@@ -45,10 +61,12 @@ digraph brainstorming {
     "Propose 2-3 approaches" [shape=box];
     "Present design sections" [shape=box];
     "User approves design?" [shape=diamond];
+    "Micro-design lane?" [shape=diamond];
     "Write design doc" [shape=box];
     "Spec self-review\n(fix inline)" [shape=box];
     "Peer review gate\n(jstack:peer-review plan)" [shape=box];
     "User reviews spec?" [shape=diamond];
+    "Prepare implementation workspace\n(jstack:using-git-worktrees unless current workspace chosen)" [shape=box];
     "Invoke writing-plans skill" [shape=doublecircle];
 
     "Explore project context" -> "Problem Framing Gate";
@@ -60,12 +78,15 @@ digraph brainstorming {
     "Propose 2-3 approaches" -> "Present design sections";
     "Present design sections" -> "User approves design?";
     "User approves design?" -> "Present design sections" [label="no, revise"];
-    "User approves design?" -> "Write design doc" [label="yes"];
+    "User approves design?" -> "Micro-design lane?" [label="yes"];
+    "Micro-design lane?" -> "Prepare implementation workspace\n(jstack:using-git-worktrees unless current workspace chosen)" [label="yes"];
+    "Micro-design lane?" -> "Write design doc" [label="no"];
     "Write design doc" -> "Spec self-review\n(fix inline)";
     "Spec self-review\n(fix inline)" -> "Peer review gate\n(jstack:peer-review plan)";
     "Peer review gate\n(jstack:peer-review plan)" -> "User reviews spec?";
     "User reviews spec?" -> "Write design doc" [label="changes requested"];
-    "User reviews spec?" -> "Invoke writing-plans skill" [label="approved"];
+    "User reviews spec?" -> "Prepare implementation workspace\n(jstack:using-git-worktrees unless current workspace chosen)" [label="approved"];
+    "Prepare implementation workspace\n(jstack:using-git-worktrees unless current workspace chosen)" -> "Invoke writing-plans skill";
 }
 ```
 
@@ -159,6 +180,9 @@ Wait for the user's response. If they request changes, make them and re-run the 
 
 **Implementation:**
 
+- Before planning implementation, ensure the execution workspace is clear:
+  - Use `jstack:using-git-worktrees` when implementation should be isolated from the current workspace.
+  - If the user explicitly wants to continue in the current workspace, or repo instructions forbid worktrees, state that and continue.
 - Invoke the writing-plans skill to create a detailed implementation plan
 - Do NOT invoke any other skill. writing-plans is the next step.
 
