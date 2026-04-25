@@ -139,22 +139,31 @@ digraph process {
 
 Use the least powerful model that can handle each role to conserve cost and increase speed.
 
-When the user asks for a fast Codex execution path, add
-`-c 'service_tier="fast"'` to generated `codex exec` commands. For mechanical
-implementation tasks, fast probes, and lightweight reviews, pair it with
-`-c 'model_reasoning_effort="low"'`. Keep higher reasoning for architecture,
-security, live-risk, release-blocking, or broad integration tasks unless the user
-explicitly prioritizes speed over depth.
+Implementation agents should default to an implementation-tier model roughly
+equivalent to `gpt-5.4` with `medium` or `low` reasoning, regardless of whether
+the host is Codex or Claude Code. Reserve top-tier reviewer models for review,
+architecture, and adversarial work. In practice, prefer `-m gpt-5.4` for Codex
+implementers and `--model claude-sonnet-4-6` for Claude implementers.
 
-**Mechanical implementation tasks** (isolated functions, clear specs, 1-2 files): use a fast, cheap model. Most implementation tasks are mechanical when the plan is well-specified.
+When generating Codex implementer commands, prefer `-m gpt-5.4`. Default to
+`-c 'model_reasoning_effort="medium"'` for normal implementation and drop to
+`-c 'model_reasoning_effort="low"'` for mechanical tasks, fast probes, or
+tightly scoped follow-up fixes. When generating Claude implementer commands,
+prefer `--model claude-sonnet-4-6` with `--effort medium`, dropping to
+`--effort low` for mechanical tasks. If the user asks for a fast Codex
+execution path, also add `-c 'service_tier="fast"'`. Only escalate above this
+lane for architecture, security, live-risk, release-blocking, or broad
+integration tasks.
 
-**Integration and judgment tasks** (multi-file coordination, pattern matching, debugging): use a standard model.
+**Mechanical implementation tasks** (isolated functions, clear specs, 1-2 files): use an implementation-tier model with `low` reasoning. Most implementation tasks are mechanical when the plan is well-specified.
+
+**Integration and judgment tasks** (multi-file coordination, pattern matching, debugging): use an implementation-tier model with `medium` reasoning.
 
 **Architecture, design, and review tasks**: use the most capable available model.
 
 **Task complexity signals:**
-- Touches 1-2 files with a complete spec → cheap model
-- Touches multiple files with integration concerns → standard model
+- Touches 1-2 files with a complete spec → `gpt-5.4`-class model, `low` reasoning
+- Touches multiple files with integration concerns → `gpt-5.4`-class model, `medium` reasoning
 - Requires design judgment or broad codebase understanding → most capable model
 
 ## Resource Budget and Agent Cleanup

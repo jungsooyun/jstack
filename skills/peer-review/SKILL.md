@@ -62,12 +62,13 @@ YAGNI violations, and dependencies not reflected in the task order.
 
 ## Commands
 
-When the user asks for a fast Codex review path, add
-`-c 'service_tier="fast"'` to every `codex review` or `codex exec` command. For
-latency-sensitive probes or lightweight reviews, pair it with
-`-c 'model_reasoning_effort="low"'`. Keep `high` reasoning for adversarial,
-security, live-risk, or release-blocking reviews unless the user explicitly
-prioritizes speed over depth.
+When Codex is the outside reviewer, use `-m gpt-5.5` by default. This is the
+preferred Codex peer-review tier for this workflow. When the user asks for a
+fast Codex review path, add `-c 'service_tier="fast"'` to every `codex review`
+or `codex exec` command. For latency-sensitive probes or lightweight reviews,
+pair it with `-c 'model_reasoning_effort="low"'`. Keep `high` reasoning for
+adversarial, security, live-risk, or release-blocking reviews unless the user
+explicitly prioritizes speed over depth.
 
 Detect the repo and base branch:
 
@@ -86,50 +87,50 @@ command -v claude >/dev/null 2>&1 && claude --version
 For Codex reviewer auth, prefer a tiny read-only probe:
 
 ```bash
-codex exec "Reply with OK." -C "$REPO_ROOT" -s read-only -c 'model_reasoning_effort="low"' </dev/null
+codex exec "Reply with OK." -C "$REPO_ROOT" -s read-only -m gpt-5.5 -c 'model_reasoning_effort="low"' </dev/null
 ```
 
 Fast Codex reviewer auth probe:
 
 ```bash
-codex exec "Reply with OK." -C "$REPO_ROOT" -s read-only -c 'service_tier="fast"' -c 'model_reasoning_effort="low"' </dev/null
+codex exec "Reply with OK." -C "$REPO_ROOT" -s read-only -m gpt-5.5 -c 'service_tier="fast"' -c 'model_reasoning_effort="low"' </dev/null
 ```
 
 For Claude reviewer auth, prefer:
 
 ```bash
-claude -p --model opus --permission-mode plan --allowedTools "LS" --add-dir "$REPO_ROOT" "Reply with OK."
+claude -p --model claude-opus-4-7 --permission-mode plan --allowedTools "LS" --add-dir "$REPO_ROOT" "Reply with OK."
 ```
 
 Codex reviewer from Claude Code:
 
 ```bash
-codex review "<boundary and optional focus>" --base "$BASE" -c 'model_reasoning_effort="high"' --enable web_search_cached
+codex review "<boundary and optional focus>" --base "$BASE" -m gpt-5.5 -c 'model_reasoning_effort="high"' --enable web_search_cached
 ```
 
 Fast Codex reviewer from Claude Code:
 
 ```bash
-codex review "<boundary and optional focus>" --base "$BASE" -c 'service_tier="fast"' -c 'model_reasoning_effort="low"' --enable web_search_cached
+codex review "<boundary and optional focus>" --base "$BASE" -m gpt-5.5 -c 'service_tier="fast"' -c 'model_reasoning_effort="low"' --enable web_search_cached
 ```
 
 Codex adversarial challenge from Claude Code:
 
 ```bash
-codex exec "<boundary plus challenge prompt>" -C "$REPO_ROOT" -s read-only -c 'model_reasoning_effort="high"' --enable web_search_cached --json
+codex exec "<boundary plus challenge prompt>" -C "$REPO_ROOT" -s read-only -m gpt-5.5 -c 'model_reasoning_effort="high"' --enable web_search_cached --json
 ```
 
 Fast Codex adversarial challenge from Claude Code, only when the user explicitly
 prioritizes speed over depth:
 
 ```bash
-codex exec "<boundary plus challenge prompt>" -C "$REPO_ROOT" -s read-only -c 'service_tier="fast"' -c 'model_reasoning_effort="low"' --enable web_search_cached --json
+codex exec "<boundary plus challenge prompt>" -C "$REPO_ROOT" -s read-only -m gpt-5.5 -c 'service_tier="fast"' -c 'model_reasoning_effort="low"' --enable web_search_cached --json
 ```
 
 Claude reviewer from Codex:
 
 ```bash
-claude -p --model opus --permission-mode plan --allowedTools "Read,Grep,Glob,LS" --add-dir "$REPO_ROOT" "<boundary plus review prompt>"
+claude -p --model claude-opus-4-7 --permission-mode plan --allowedTools "Read,Grep,Glob,LS" --add-dir "$REPO_ROOT" "<boundary plus review prompt>"
 ```
 
 Use a 10 minute timeout around outside reviewer commands when the host supports it.

@@ -187,12 +187,20 @@ spec before execution handoff.
 
 - In Codex, the reviewer is Claude.
 - In Claude Code, the reviewer is Codex.
-- If the user asks for a fast Codex review or execution lane, include this
-  guidance in the plan handoff and any generated Codex reviewer command:
-  `-c 'service_tier="fast"'`. For lightweight planning/review tasks, also use
-  `-c 'model_reasoning_effort="low"'`; keep higher reasoning for adversarial,
-  security, live-risk, or release-blocking review unless the user explicitly
-  prioritizes speed over depth.
+- When Codex calls Claude for peer review, pin Claude to
+  `--model claude-opus-4-7` rather than the floating `opus` alias.
+- If Claude Code calls Codex for peer review, default the Codex reviewer to
+  `-m gpt-5.5`. If the user asks for a fast Codex review lane, also add
+  `-c 'service_tier="fast"'`. For lightweight planning/review tasks, pair it
+  with `-c 'model_reasoning_effort="low"'`; keep higher reasoning for
+  adversarial, security, live-risk, or release-blocking review unless the user
+  explicitly prioritizes speed over depth.
+- For implementation handoff, specify that implementer agents should stay on a
+  `gpt-5.4`-class lane with `medium` or `low` reasoning, regardless of whether
+  the implementer runs in Codex or Claude Code. In concrete terms, prefer
+  `-m gpt-5.4` for Codex implementers and `--model claude-sonnet-4-6` for
+  Claude implementers. Reserve top-tier models for review and architecture
+  judgment.
 - The reviewer is read-only and must not edit files, run implementation, spawn subagents, or start long-running commands.
 - Only treat substantive issues as blocking: missed spec requirements, wrong task order, vague or unbuildable steps, missing tests, incorrect commands, scope creep, or unsafe decomposition.
 - Ignore pure wording preferences unless they prevent an engineer from following the plan.
