@@ -23,6 +23,8 @@ PY
 [[ "$(json_name gemini-extension.json)" == "jstack" ]] || fail "gemini-extension.json name must be jstack"
 
 [[ -f skills/peer-review/SKILL.md ]] || fail "skills/peer-review/SKILL.md is required"
+grep -q -- '--add-dir "$REPO_ROOT" -- "Reply with OK."' skills/peer-review/SKILL.md || fail "Claude reviewer preflight must terminate --add-dir before prompt"
+grep -q "stdin=subprocess.DEVNULL" skills/peer-review/SKILL.md || fail "Claude subprocess reviewer guidance must close stdin"
 grep -q "docs/jstack/specs" skills/brainstorming/SKILL.md || fail "brainstorming must write specs under docs/jstack/specs"
 grep -q "Problem Framing Gate" skills/brainstorming/SKILL.md || fail "brainstorming must include Problem Framing Gate"
 grep -q "docs/jstack/plans" skills/writing-plans/SKILL.md || fail "writing-plans must write plans under docs/jstack/plans"

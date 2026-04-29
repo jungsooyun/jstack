@@ -1,6 +1,6 @@
 {
   "name": "jstack",
-  "version": "5.0.11",
+  "version": "5.0.12",
   "author": "jerry",
   "type": "module",
   "main": ".opencode/plugins/jstack.js"

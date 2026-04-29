@@ -76,6 +76,13 @@ stdin as an additional `<stdin>` block even when a prompt argument is provided;
 leaving stdin open can make the wrapper appear stuck after `Reading additional
 input from stdin...`.
 
+When Codex launches Claude reviewer commands, terminate variadic options before
+the prompt and close inherited stdin. Claude's `--add-dir <directories...>` can
+consume every following positional argument until `--`; without the delimiter,
+the review prompt may be parsed as another directory. In shell commands, put
+`--` before the prompt and add `</dev/null`. In Python wrappers, pass the prompt
+after `--` and use `stdin=subprocess.DEVNULL`.
+
 Detect the repo and base branch:
 
 ```bash
@@ -105,7 +112,7 @@ codex exec "Reply with OK." -C "$REPO_ROOT" -s read-only -m gpt-5.5 -c 'service_
 For Claude reviewer auth, prefer:
 
 ```bash
-claude -p --model claude-opus-4-7 --permission-mode plan --allowedTools "LS" --add-dir "$REPO_ROOT" "Reply with OK."
+claude -p --model claude-opus-4-7 --permission-mode plan --allowedTools "LS" --add-dir "$REPO_ROOT" -- "Reply with OK." </dev/null
 ```
 
 Codex reviewer from Claude Code:
@@ -136,7 +143,7 @@ codex exec "<boundary plus challenge prompt>" -C "$REPO_ROOT" -s read-only -m gp
 Claude reviewer from Codex:
 
 ```bash
-claude -p --model claude-opus-4-7 --permission-mode plan --allowedTools "Read,Grep,Glob,LS" --add-dir "$REPO_ROOT" "<boundary plus review prompt>"
+claude -p --model claude-opus-4-7 --permission-mode plan --allowedTools "Read,Grep,Glob,LS" --add-dir "$REPO_ROOT" -- "<boundary plus review prompt>" </dev/null
 ```
 
 Use a 30 minute timeout around outside reviewer commands when the host supports it.
