@@ -43,6 +43,22 @@ This structure informs the task decomposition. Each task should produce self-con
 - "Run the tests and make sure they pass" - step
 - "Commit" - step
 
+## Tracer Bullet Decomposition
+
+Prefer vertical tracer bullet tasks over horizontal slice tasks. Each task should
+deliver a narrow but complete path through the relevant layers and be demoable or
+verifiable on its own.
+
+Horizontal slice tasks are a red flag:
+- "Add the database tables"
+- "Build the API layer"
+- "Create the UI"
+- "Write the tests"
+
+Use a horizontal foundation task only when it is genuinely required to unblock a
+vertical slice and has its own concrete acceptance criteria. Otherwise split the
+work into thinner end-to-end tasks.
+
 ## Plan Fidelity Tiers
 
 Choose the lowest fidelity that still lets an agent implement safely. The user should not need to choose this unless the risk is ambiguous; make the call and state it in the plan.
@@ -156,6 +172,10 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 **4. Fidelity fit:** Did you choose the right tier? If the plan includes large invented code for brownfield internals, lower the fidelity. If the plan leaves high-risk behavior underspecified, raise the fidelity.
 
+**5. Tracer bullet check:** Is any task merely a horizontal slice of one layer?
+If so, convert it into an end-to-end slice or document why it is a required
+foundation task with its own acceptance criteria.
+
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 
 ## JStack Review Report
@@ -213,6 +233,15 @@ spec before execution handoff.
 
 After saving and reviewing the plan, decide whether to continue automatically or
 ask for an execution choice.
+
+## Long-Lived Agent Briefs
+
+When converting work into a backlog item or issue that may sit for days or
+weeks, use `agent-brief-template.md`. Agent briefs are durable behavioral
+contracts; they should name current behavior, desired behavior, key interfaces,
+acceptance criteria, and out-of-scope items. They are not replacements for
+JStack implementation plans, and they should avoid file paths and line numbers
+that will go stale.
 
 ### Choose Execution Lane
 

@@ -62,6 +62,9 @@ You MUST complete each phase before proceeding to the next.
    - What are the exact steps?
    - Does it happen every time?
    - If not reproducible → gather more data, don't guess
+   - If reproduction requires human UI actions or visual confirmation, copy
+     `scripts/hitl-loop.template.sh`, edit the prompts, run it, and use the
+     captured answers as reproduction evidence
 
 3. **Check Recent Changes**
    - What changed that could cause this?
@@ -282,6 +285,7 @@ These techniques are part of systematic debugging and available in this director
 - **`root-cause-tracing.md`** - Trace bugs backward through call stack to find original trigger
 - **`defense-in-depth.md`** - Add validation at multiple layers after finding root cause
 - **`condition-based-waiting.md`** - Replace arbitrary timeouts with condition polling
+- **`scripts/hitl-loop.template.sh`** - Structure human-in-the-loop reproduction steps
 
 **Related skills:**
 - **jstack:test-driven-development** - For creating failing test case (Phase 4, Step 1)

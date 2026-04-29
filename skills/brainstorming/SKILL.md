@@ -142,6 +142,13 @@ digraph brainstorming {
 
 **Documentation:**
 
+- Before writing the spec, handle shared language and durable decisions lazily:
+  - If domain terms are ambiguous or repeatedly redefined, create or update
+    `CONTEXT.md` using `context-format.md`. Include only project-domain terms,
+    not general programming concepts.
+  - If a decision is hard to reverse, surprising without context, and the result
+    of a real trade-off, offer an ADR using `adr-format.md`. Do not create ADRs
+    for obvious or reversible choices.
 - Write the validated design (spec) to `docs/jstack/specs/YYYY-MM-DD-<topic>-design.md`
   - (User preferences for spec location override this default)
   - When continuing older work, read existing `docs/superpowers/specs/` specs as legacy inputs, but write new specs under `docs/jstack/specs/`.

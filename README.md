@@ -44,6 +44,9 @@ brainstorming
   use Codex as reviewer.
 - **Adversarial challenge mode**: production-failure review for live trading,
   transfers, signers, callbacks, exchange state, migrations, and release blockers.
+- **Domain/architecture references**: optional `CONTEXT.md`, ADR, tracer-bullet,
+  agent-brief, and architecture-deepening templates keep long plans from carrying
+  repeated vocabulary and stale instructions.
 - **JSTACK REVIEW REPORT**: specs/plans/CURRENT files can track review status,
   findings, artifacts, verification, and live evidence.
 - **Claude/Codex sync**: both primary hosts point at the same local skills source.
@@ -139,6 +142,8 @@ refreshes.
 **Engineering discipline**
 - `test-driven-development` - red/green/refactor discipline.
 - `systematic-debugging` - root-cause debugging before fixes.
+- `architecture-deepening` - architecture review vocabulary for deeper modules,
+  interface design, seams, adapters, leverage, and locality.
 - `verification-before-completion` - evidence before completion claims.
 - `using-git-worktrees` - isolated workspaces.
 - `finishing-a-development-branch` - final branch/PR/merge/cleanup choices.
