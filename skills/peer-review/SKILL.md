@@ -70,6 +70,12 @@ pair it with `-c 'model_reasoning_effort="low"'`. Keep `high` reasoning for
 adversarial, security, live-risk, or release-blocking reviews unless the user
 explicitly prioritizes speed over depth.
 
+When Claude Code launches Codex reviewer commands, always close stdin with
+`</dev/null`, especially for background shell tasks. Codex CLI may read piped
+stdin as an additional `<stdin>` block even when a prompt argument is provided;
+leaving stdin open can make the wrapper appear stuck after `Reading additional
+input from stdin...`.
+
 Detect the repo and base branch:
 
 ```bash
@@ -105,26 +111,26 @@ claude -p --model claude-opus-4-7 --permission-mode plan --allowedTools "LS" --a
 Codex reviewer from Claude Code:
 
 ```bash
-codex review "<boundary and optional focus>" --base "$BASE" -m gpt-5.5 -c 'model_reasoning_effort="high"' --enable web_search_cached
+codex review "<boundary and optional focus>" --base "$BASE" -m gpt-5.5 -c 'model_reasoning_effort="high"' --enable web_search_cached </dev/null
 ```
 
 Fast Codex reviewer from Claude Code:
 
 ```bash
-codex review "<boundary and optional focus>" --base "$BASE" -m gpt-5.5 -c 'service_tier="fast"' -c 'model_reasoning_effort="low"' --enable web_search_cached
+codex review "<boundary and optional focus>" --base "$BASE" -m gpt-5.5 -c 'service_tier="fast"' -c 'model_reasoning_effort="low"' --enable web_search_cached </dev/null
 ```
 
 Codex adversarial challenge from Claude Code:
 
 ```bash
-codex exec "<boundary plus challenge prompt>" -C "$REPO_ROOT" -s read-only -m gpt-5.5 -c 'model_reasoning_effort="high"' --enable web_search_cached --json
+codex exec "<boundary plus challenge prompt>" -C "$REPO_ROOT" -s read-only -m gpt-5.5 -c 'model_reasoning_effort="high"' --enable web_search_cached --json </dev/null
 ```
 
 Fast Codex adversarial challenge from Claude Code, only when the user explicitly
 prioritizes speed over depth:
 
 ```bash
-codex exec "<boundary plus challenge prompt>" -C "$REPO_ROOT" -s read-only -m gpt-5.5 -c 'service_tier="fast"' -c 'model_reasoning_effort="low"' --enable web_search_cached --json
+codex exec "<boundary plus challenge prompt>" -C "$REPO_ROOT" -s read-only -m gpt-5.5 -c 'service_tier="fast"' -c 'model_reasoning_effort="low"' --enable web_search_cached --json </dev/null
 ```
 
 Claude reviewer from Codex:
@@ -133,7 +139,7 @@ Claude reviewer from Codex:
 claude -p --model claude-opus-4-7 --permission-mode plan --allowedTools "Read,Grep,Glob,LS" --add-dir "$REPO_ROOT" "<boundary plus review prompt>"
 ```
 
-Use a 10 minute timeout around outside reviewer commands when the host supports it.
+Use a 30 minute timeout around outside reviewer commands when the host supports it.
 If auth fails, stop and report the exact login command (`codex login` or Claude Code
 login) instead of falling back to self-review. If the command hangs, report the
 timeout and save any partial stderr/stdout in the artifact.

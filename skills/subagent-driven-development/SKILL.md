@@ -194,15 +194,50 @@ typechecks, linters, language servers, or MCP-backed tooling at the same time.
 - Avoid broad repo scans when focused file/symbol searches are enough.
 
 **Interruption and cleanup protocol:**
-- Maintain a small ledger while running this workflow: task, role, agent id/session id if available, status, started time, cleanup status, and any background PIDs the agent reports.
+- Maintain a small ledger while running this workflow: task, role, agent id/session id if available, status, started time, last check-in time, next check due, cleanup status, and any background PIDs the agent reports.
 - On user interruption, stop dispatching new agents immediately.
 - Do not kill processes by broad names like `codex`, `node`, `tmux`, or `omx`. Only close/terminate agents or PIDs that are recorded in the ledger and belong to this workflow/session/worktree.
 - If ownership is uncertain, report the suspected leftover agents/processes and leave them running rather than risking another user's or another session's work.
 - Before final completion, verify the ledger has no running agents, no unclosed reviewers, and no known background commands.
 
+## Active Monitoring
+
+Subagent progress is a contract. Pick a monitoring mode before dispatch:
+
+**Normal mode:** Use for small slices expected to finish quickly. Wait for the final
+implementer status, but do not silently wait past the next check due in the ledger.
+
+**Checkpointed mode:** Use for long, high-risk, ambiguous, or multi-file slices. Tell
+the implementer to inspect first and return `CHECKPOINT` with intended approach,
+files to edit, tests to run, risks, and blockers. Do not let implementation start
+until the checkpoint is reviewed and approved or adjusted.
+
+**Context budget for monitoring:** Checkpoints and status pings must be bounded.
+Ask for compact structured output, not a reasoning transcript. Default limits:
+`CHECKPOINT` <= 1200 characters, stale-status reply <= 800 characters, no code
+excerpts, no diffs, no full logs, and no narrative analysis unless explicitly
+requested. If command output is needed, ask for only the last 40 lines or 4000
+characters plus the command name and exit status. Large notes, logs, and raw
+outputs belong in an artifact path, not in the parent context.
+
+**Runtime with persistent agents:** If the host supports polling, reading status, or
+sending follow-up input, check every 5-10 minutes. Ask for a bounded status when
+stale: `Reply in <=800 chars, status only: phase; files touched/planned; command
+running; blocker; next milestone. No code, logs, or explanations.` If there is no
+useful response after two stale intervals or about 30 minutes without progress,
+stop or re-slice instead of waiting indefinitely.
+
+**Runtime with final-output-only tasks:** Do not dispatch a slice that cannot be
+monitored and is expected to run long. Split it, or run a scout/checkpoint pass first
+and dispatch implementation only after the approach is clear.
+
 ## Handling Implementer Status
 
-Implementer subagents report one of four statuses. Handle each appropriately:
+Implementer subagents report one of these statuses. Handle each appropriately:
+
+**CHECKPOINT:** The implementer inspected but has not started implementation. Review
+the proposed approach, files, tests, risks, and blockers. Approve, adjust, split the
+slice, or cancel before edits begin.
 
 **DONE:** Proceed to the chosen review gate for the slice.
 

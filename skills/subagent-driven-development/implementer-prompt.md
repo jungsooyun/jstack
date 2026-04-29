@@ -18,6 +18,17 @@ Task tool (general-purpose):
 
     ## Before You Begin
 
+    If the controller requested checkpointed mode, inspect the relevant code first,
+    then report a compact `Status: CHECKPOINT`:
+    - Approach: up to 3 bullets
+    - Files: paths only
+    - Tests: exact commands only
+    - Risks/questions: up to 3 bullets
+
+    Do not edit files in checkpointed mode until the controller approves or adjusts
+    the approach. Keep the checkpoint under 1200 characters. Do not include code
+    excerpts, diffs, logs, or a reasoning transcript.
+
     If you have questions about:
     - The requirements or acceptance criteria
     - The approach or implementation strategy
@@ -36,6 +47,8 @@ Task tool (general-purpose):
     - If a background command is unavoidable, record its PID, explain why it was needed,
       and stop it before reporting DONE.
     - Avoid broad repo scans when focused file/symbol searches are enough.
+    - Do not paste full command output into status reports. If output matters, include
+      the command, exit status, and only the last 40 lines or 4000 characters.
 
     ## Your Job
 
@@ -111,13 +124,16 @@ Task tool (general-purpose):
     ## Report Format
 
     When done, report:
-    - **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
+    - **Status:** CHECKPOINT | DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
     - What you implemented (or what you attempted, if blocked)
-    - What you tested and test results
+    - What you tested and test results; summarize long output and include only the
+      last 40 lines or 4000 characters if failure output is needed
     - Files changed
     - Self-review findings (if any)
     - Any issues or concerns
 
+    Use CHECKPOINT only when checkpointed mode was requested and you have not edited
+    files yet.
     Use DONE_WITH_CONCERNS if you completed the work but have doubts about correctness.
     Use BLOCKED if you cannot complete the task. Use NEEDS_CONTEXT if you need
     information that wasn't provided. Never silently produce work you're unsure about.

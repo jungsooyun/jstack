@@ -1,7 +1,7 @@
 {
   "name": "jstack",
   "description": "Local skills library for Claude Code and Codex: planning, TDD, peer review, debugging, and delivery workflows",
-  "version": "5.0.9",
+  "version": "5.0.10",
   "author": {
     "name": "jerry"
   },
