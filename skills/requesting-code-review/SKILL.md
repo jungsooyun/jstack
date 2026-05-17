@@ -74,10 +74,11 @@ You: [Fix progress indicators]
 
 ## Integration with Workflows
 
-**Subagent-Driven Development:**
+**`jstack:subagent-driven-development`:**
 - Review after EACH task
 - Catch issues before they compound
 - Fix before moving to next task
+- For live/security/money/state-risk slices, follow with `jstack:peer-review challenge`
 
 **Executing Plans:**
 - Review after each task or at natural checkpoints
