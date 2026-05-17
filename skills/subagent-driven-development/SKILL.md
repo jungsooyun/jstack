@@ -11,6 +11,8 @@ Execute plan by dispatching subagents for coherent task slices, with review gate
 
 **Core principle:** The orchestrator owns dependency judgment. Use the smallest isolated subagent slice that preserves correctness, then apply the review intensity the risk deserves.
 
+**Continuous execution:** Do not pause to check in with your human partner between tasks. Execute all tasks from the plan without stopping. The only reasons to stop are: BLOCKED status you cannot resolve, ambiguity that genuinely prevents progress, the resource/risk guards defined later in this skill (system saturation, review-loop repeats, live/security/money/state-risk challenge), or all tasks complete. "Should I continue?" prompts and progress summaries between tasks waste their time — they asked you to execute the plan, so execute it.
+
 ## When to Use
 
 ```dot
@@ -430,7 +432,7 @@ execution, spend funds, or change live positions without explicit user confirmat
 ## Integration
 
 **Required workflow skills:**
-- **jstack:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
+- **jstack:using-git-worktrees** - Ensures isolated workspace (creates one or verifies existing)
 - **jstack:writing-plans** - Creates the plan this skill executes
 - **jstack:requesting-code-review** - Code review template for reviewer subagents
 - **jstack:finishing-a-development-branch** - Complete development after all tasks

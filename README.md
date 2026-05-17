@@ -129,8 +129,8 @@ refreshes.
 ## Main Skills
 
 **Workflow**
-- `using-superpowers` - startup discipline and skill routing. Name retained for
-  compatibility with the upstream skill.
+- `using-jstack` - startup discipline and skill routing. Renamed from
+  upstream `using-superpowers` for namespace consistency under the `jstack:` prefix.
 - `brainstorming` - design/spec workflow with Problem Framing Gate and peer-review
   spec gate.
 - `writing-plans` - concrete implementation plans with peer-review plan gate.

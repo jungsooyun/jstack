@@ -24,24 +24,12 @@ multi_agent = true
 
 This enables `spawn_agent`, `wait`, and `close_agent` for skills like `dispatching-parallel-agents` and `subagent-driven-development`.
 
-## Named agent dispatch
+## Subagent dispatch
 
-Claude Code skills reference named agent types like `jstack:code-reviewer`.
-Codex does not have a named agent registry — `spawn_agent` creates generic agents
-from built-in roles (`default`, `explorer`, `worker`).
-
-When a skill says to dispatch a named agent type:
-
-1. Find the agent's prompt file (e.g., `agents/code-reviewer.md` or the skill's
-   local prompt template like `code-quality-reviewer-prompt.md`)
-2. Read the prompt content
-3. Fill any template placeholders (`{BASE_SHA}`, `{WHAT_WAS_IMPLEMENTED}`, etc.)
-4. Spawn a `worker` agent with the filled content as the `message`
-
-| Skill instruction | Codex equivalent |
-|-------------------|------------------|
-| `Task tool (jstack:code-reviewer)` | `spawn_agent(agent_type="worker", message=...)` with `code-reviewer.md` content |
-| `Task tool (general-purpose)` with inline prompt | `spawn_agent(message=...)` with the same prompt |
+jstack skills dispatch reviewer/implementer subagents via `Task (general-purpose)`
+with an inline prompt (filled from the skill's local template, e.g.
+`requesting-code-review/code-reviewer.md` or `code-quality-reviewer-prompt.md`).
+On Codex, route this to `spawn_agent(message=...)` with the filled prompt content.
 
 ### Message framing
 
@@ -52,7 +40,7 @@ for maximum instruction adherence:
 Your task is to perform the following. Follow the instructions below exactly.
 
 <agent-instructions>
-[filled prompt content from the agent's .md file]
+[filled prompt content from the skill's template]
 </agent-instructions>
 
 Execute this now. Output ONLY the structured response following the format
@@ -62,13 +50,6 @@ specified in the instructions above.
 - Use task-delegation framing ("Your task is...") rather than persona framing ("You are...")
 - Wrap instructions in XML tags — the model treats tagged blocks as authoritative
 - End with an explicit execution directive to prevent summarization of the instructions
-
-### When this workaround can be removed
-
-This approach compensates for Codex's plugin system not yet supporting an `agents`
-field in `plugin.json`. When `RawPluginManifest` gains an `agents` field, the
-plugin can symlink to `agents/` (mirroring the existing `skills/` symlink) and
-skills can dispatch named agent types directly.
 
 ## Environment Detection
 

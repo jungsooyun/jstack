@@ -1,2 +1,2 @@
-@./skills/using-superpowers/SKILL.md
-@./skills/using-superpowers/references/gemini-tools.md
+@./skills/using-jstack/SKILL.md
+@./skills/using-jstack/references/gemini-tools.md
