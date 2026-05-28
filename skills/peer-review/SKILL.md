@@ -21,6 +21,19 @@ Default to `review` when there is a diff. Default to `plan` when the user points
 a spec or plan. Use `challenge` for money movement, auth, security, exchange
 adapters, state machines, live-smoke paths, and release blockers.
 
+## When to Request
+
+Request an outside review when: completing a task or major feature, before merging, or before any security/auth/payments/live-risk change. Reviewing your own work in the same context is not a substitute — the point is an independent lane.
+
+## Red Flags (review-avoidance rationalizations)
+
+| Thought | Reality |
+|---|---|
+| "It's a small change, skip review" | Small diffs hide the costliest bugs. Request it. |
+| "I already checked it myself" | Self-review in the authoring context is not independent. |
+| "Tests pass, so it's fine" | Tests prove what you thought to test, not what you missed. |
+| "Review will slow me down" | A closed PR slows you down more. |
+
 ## Host Routing
 
 Use the opposite reviewer:
@@ -62,26 +75,22 @@ YAGNI violations, and dependencies not reflected in the task order.
 
 ## Commands
 
-When Codex is the outside reviewer, use `-m gpt-5.5` by default. This is the
-preferred Codex peer-review tier for this workflow. When the user asks for a
-fast Codex review path, add `-c 'service_tier="fast"'` to every `codex review`
-or `codex exec` command. For latency-sensitive probes or lightweight reviews,
-pair it with `-c 'model_reasoning_effort="low"'`. Keep `high` reasoning for
-adversarial, security, live-risk, or release-blocking reviews unless the user
-explicitly prioritizes speed over depth.
+When Codex is the outside reviewer, use `-m gpt-5.5` by default. For a fast lane,
+add `-c 'service_tier="fast"'` to every `codex review`/`codex exec` command, and
+pair with `-c 'model_reasoning_effort="low"'` for latency-sensitive or lightweight
+reviews. Keep `high` reasoning for adversarial, security, live-risk, or
+release-blocking reviews unless the user explicitly prioritizes speed over depth.
 
 When Claude Code launches Codex reviewer commands, always close stdin with
-`</dev/null`, especially for background shell tasks. Codex CLI may read piped
-stdin as an additional `<stdin>` block even when a prompt argument is provided;
-leaving stdin open can make the wrapper appear stuck after `Reading additional
-input from stdin...`.
+`</dev/null` (especially for background tasks): Codex CLI may read piped stdin as
+an extra `<stdin>` block even with a prompt argument, leaving the wrapper stuck
+after `Reading additional input from stdin...`.
 
 When Codex launches Claude reviewer commands, terminate variadic options before
-the prompt and close inherited stdin. Claude's `--add-dir <directories...>` can
-consume every following positional argument until `--`; without the delimiter,
-the review prompt may be parsed as another directory. In shell commands, put
-`--` before the prompt and add `</dev/null`. In Python wrappers, pass the prompt
-after `--` and use `stdin=subprocess.DEVNULL`.
+the prompt and close inherited stdin. Claude's `--add-dir <directories...>`
+consumes following positional args until `--`, so the prompt may be parsed as a
+directory. Shell: put `--` before the prompt and add `</dev/null`. Python
+wrappers: pass the prompt after `--` and use `stdin=subprocess.DEVNULL`.
 
 Detect the repo and base branch:
 
@@ -97,53 +106,34 @@ command -v codex >/dev/null 2>&1 && codex --version
 command -v claude >/dev/null 2>&1 && claude --version
 ```
 
-For Codex reviewer auth, prefer a tiny read-only probe:
+For Codex reviewer auth, prefer a tiny read-only probe (add `-c 'service_tier="fast"'` for the fast lane, per the rule above):
 
 ```bash
 codex exec "Reply with OK." -C "$REPO_ROOT" -s read-only -m gpt-5.5 -c 'model_reasoning_effort="low"' </dev/null
 ```
 
-Fast Codex reviewer auth probe:
-
-```bash
-codex exec "Reply with OK." -C "$REPO_ROOT" -s read-only -m gpt-5.5 -c 'service_tier="fast"' -c 'model_reasoning_effort="low"' </dev/null
-```
-
 For Claude reviewer auth, prefer:
 
 ```bash
-claude -p --model claude-opus-4-7 --permission-mode plan --allowedTools "LS" --add-dir "$REPO_ROOT" -- "Reply with OK." </dev/null
+claude -p --model claude-opus-4-8 --permission-mode plan --allowedTools "LS" --add-dir "$REPO_ROOT" -- "Reply with OK." </dev/null
 ```
 
-Codex reviewer from Claude Code:
+Codex reviewer from Claude Code (for the fast lane, swap `model_reasoning_effort="high"` for `-c 'service_tier="fast"' -c 'model_reasoning_effort="low"'`):
 
 ```bash
 codex review "<boundary and optional focus>" --base "$BASE" -m gpt-5.5 -c 'model_reasoning_effort="high"' --enable web_search_cached </dev/null
 ```
 
-Fast Codex reviewer from Claude Code:
-
-```bash
-codex review "<boundary and optional focus>" --base "$BASE" -m gpt-5.5 -c 'service_tier="fast"' -c 'model_reasoning_effort="low"' --enable web_search_cached </dev/null
-```
-
-Codex adversarial challenge from Claude Code:
+Codex adversarial challenge from Claude Code (same fast-lane swap applies, only when the user explicitly prioritizes speed over depth):
 
 ```bash
 codex exec "<boundary plus challenge prompt>" -C "$REPO_ROOT" -s read-only -m gpt-5.5 -c 'model_reasoning_effort="high"' --enable web_search_cached --json </dev/null
 ```
 
-Fast Codex adversarial challenge from Claude Code, only when the user explicitly
-prioritizes speed over depth:
-
-```bash
-codex exec "<boundary plus challenge prompt>" -C "$REPO_ROOT" -s read-only -m gpt-5.5 -c 'service_tier="fast"' -c 'model_reasoning_effort="low"' --enable web_search_cached --json </dev/null
-```
-
 Claude reviewer from Codex:
 
 ```bash
-claude -p --model claude-opus-4-7 --permission-mode plan --allowedTools "Read,Grep,Glob,LS" --add-dir "$REPO_ROOT" -- "<boundary plus review prompt>" </dev/null
+claude -p --model claude-opus-4-8 --permission-mode plan --allowedTools "Read,Grep,Glob,LS" --add-dir "$REPO_ROOT" -- "<boundary plus review prompt>" </dev/null
 ```
 
 Use a 30 minute timeout around outside reviewer commands when the host supports it.
@@ -179,9 +169,8 @@ Artifact format:
 - Needs user decision:
 ```
 
-Show the raw reviewer output first. Then add a short triage. Do not implement
-accepted fixes unless the active workflow has already reached an implementation
-step where edits are allowed.
+Show raw reviewer output first, then a short triage. Do not implement accepted
+fixes unless the workflow has reached a step where edits are allowed.
 
 ## Review Report
 

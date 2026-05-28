@@ -97,6 +97,7 @@ digraph brainstorming {
 **Understanding the idea:**
 
 - Check out the current project state first (files, docs, recent commits)
+- When exploring project context, scope searches from owned paths and keep wide/unpredictable-output searches out of context (CLAUDE.md context_routing if available; otherwise narrow native search).
 - Run the **Problem Framing Gate** before feature details when the request could change product scope, architecture, live operations, money movement, security, exchange behavior, or cross-repo boundaries:
   - What is the actual bottleneck or failure mode this work removes?
   - Which repo, service, or layer owns it?

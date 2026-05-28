@@ -5,12 +5,6 @@ description: Use when receiving code review feedback, before implementing sugges
 
 # Code Review Reception
 
-## Overview
-
-Code review requires technical evaluation, not emotional performance.
-
-**Core principle:** Verify before implementing. Ask before assuming. Technical correctness over social comfort.
-
 ## The Response Pattern
 
 ```
@@ -203,11 +197,3 @@ You understand 1,2,3,6. Unclear on 4,5.
 ## GitHub Thread Replies
 
 When replying to inline review comments on GitHub, reply in the comment thread (`gh api repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies`), not as a top-level PR comment.
-
-## The Bottom Line
-
-**External feedback = suggestions to evaluate, not orders to follow.**
-
-Verify. Question. Then implement.
-
-No performative agreement. Technical rigor always.

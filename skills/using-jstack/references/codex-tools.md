@@ -28,7 +28,7 @@ This enables `spawn_agent`, `wait`, and `close_agent` for skills like `dispatchi
 
 jstack skills dispatch reviewer/implementer subagents via `Task (general-purpose)`
 with an inline prompt (filled from the skill's local template, e.g.
-`requesting-code-review/code-reviewer.md` or `code-quality-reviewer-prompt.md`).
+`subagent-driven-development/code-reviewer.md` or `code-quality-reviewer-prompt.md`).
 On Codex, route this to `spawn_agent(message=...)` with the filled prompt content.
 
 ### Message framing

@@ -17,6 +17,8 @@ Guide completion of development work by presenting clear options and handling ch
 
 ### Step 1: Verify Tests
 
+Gate: invoke jstack:verification-before-completion first. Do not present integration options (Step 4) until verification evidence is collected and the suite passes.
+
 **Before presenting options, verify tests pass:**
 
 ```bash

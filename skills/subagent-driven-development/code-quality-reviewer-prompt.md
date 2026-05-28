@@ -8,7 +8,7 @@ Use this template when dispatching a code quality reviewer subagent.
 
 ```
 Task tool (general-purpose):
-  Use template at requesting-code-review/code-reviewer.md
+  Use template at code-reviewer.md (this skill's local template)
 
   DESCRIPTION: [task summary, from implementer's report]
   PLAN_OR_REQUIREMENTS: Task N from [plan-file]
@@ -16,7 +16,7 @@ Task tool (general-purpose):
   HEAD_SHA: [current commit]
 ```
 
-Specify the reviewer model lane explicitly when dispatching (Claude: `--model claude-opus-4-7` or `--model claude-sonnet-4-6`; Codex: `-m gpt-5.4` with appropriate `-c 'model_reasoning_effort=...'`).
+Specify the reviewer model lane explicitly when dispatching (Claude: `--model claude-opus-4-8` or `--model claude-sonnet-4-6`; Codex: `-m gpt-5.4` with appropriate `-c 'model_reasoning_effort=...'`).
 
 **Resource boundaries:**
 - Do not spawn subagents or parallel agents; escalate instead.

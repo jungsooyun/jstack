@@ -69,6 +69,8 @@ Before dispatching any implementer, the orchestrator MUST read the whole plan an
 
 Record the chosen slices in TodoWrite with enough detail to show why each slice is isolated, grouped, or split.
 
+When consecutive plan tasks are tagged `parallel-safe` and share no files or state, dispatch them concurrently in one batch via jstack:dispatching-parallel-agents — do not run them sequentially.
+
 ## Review Intensity
 
 Pick the review gate per slice. Do not skip review; choose the right size.
@@ -255,11 +257,15 @@ slice, or cancel before edits begin.
 
 **Never** ignore an escalation or force the same model to retry without changes. If the implementer said it's stuck, something needs to change.
 
+Before marking a slice complete, invoke jstack:verification-before-completion against the slice's claims: confirm the test named in the task's `Test-first:` field actually ran and passed. No verification evidence → not complete.
+
 ## Prompt Templates
 
 - `./implementer-prompt.md` - Dispatch implementer subagent
 - `./spec-reviewer-prompt.md` - Dispatch spec compliance reviewer subagent
 - `./code-quality-reviewer-prompt.md` - Dispatch code quality reviewer subagent
+
+Implementer prompts must say: Gather context with searches scoped to owned paths; route wide/unpredictable-output searches through processing tools when available (CLAUDE.md context_routing) so raw output stays out of your context.
 
 For combined low-risk review, use one reviewer with both the slice requirements and the diff range. The prompt must say:
 
@@ -345,38 +351,6 @@ Final reviewer: All requirements met, ready to merge
 Done!
 ```
 
-## Advantages
-
-**vs. Manual execution:**
-- Subagents follow TDD naturally
-- Fresh or intentionally grouped context per slice (less confusion)
-- Parallel-safe (subagents don't interfere)
-- Subagent can ask questions (before AND during work)
-
-**vs. Executing Plans:**
-- Same session (no handoff)
-- Continuous progress (no waiting)
-- Review checkpoints automatic
-
-**Efficiency gains:**
-- No file reading overhead (controller provides full text)
-- Controller curates exactly what context is needed
-- Subagent gets complete information upfront
-- Questions surfaced before work begins (not after)
-
-**Quality gates:**
-- Self-review catches issues before handoff
-- Review intensity matches slice risk
-- Review loops ensure fixes actually work
-- Spec compliance prevents over/under-building
-- Code quality ensures implementation is well-built
-
-**Cost:**
-- More subagent invocations than inline execution
-- Controller does more prep work (extracting all tasks upfront)
-- Review loops add iterations
-- But catches issues early (cheaper than debugging later)
-
 ## Red Flags
 
 **Never:**
@@ -434,7 +408,7 @@ execution, spend funds, or change live positions without explicit user confirmat
 **Required workflow skills:**
 - **jstack:using-git-worktrees** - Ensures isolated workspace (creates one or verifies existing)
 - **jstack:writing-plans** - Creates the plan this skill executes
-- **jstack:requesting-code-review** - Code review template for reviewer subagents
+- **code-reviewer.md** (this skill's local template) - Code review prompt for reviewer subagents
 - **jstack:finishing-a-development-branch** - Complete development after all tasks
 - **jstack:peer-review** - REQUIRED for final adversarial challenge when live/security/money/state-risk surfaces changed
 

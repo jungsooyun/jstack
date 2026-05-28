@@ -7,9 +7,7 @@ description: Use when you have a spec or requirements for a multi-step task, bef
 
 ## Overview
 
-Write implementation plans at the fidelity the work needs. The default is comprehensive: assume the engineer has zero context for our codebase and questionable taste. Document what they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
-
-Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
+Write implementation plans at the fidelity the work needs. The default is comprehensive: assume a skilled engineer who has zero context for our codebase, toolset, and problem domain, and weak test-design instincts. Document what they need: which files to touch per task, code, testing, docs to check, how to test it. Give them bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
 
 **Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
@@ -34,6 +32,8 @@ Before defining tasks, map out which files will be created or modified and what 
 
 This structure informs the task decomposition. Each task should produce self-contained changes that make sense independently.
 
+When exploring the codebase to ground the plan, scope searches from owned paths and keep wide/unpredictable-output searches out of your context (see CLAUDE.md context_routing if available; otherwise narrow native search).
+
 ## Bite-Sized Task Granularity
 
 **Each step is one action (2-5 minutes):**
@@ -45,19 +45,7 @@ This structure informs the task decomposition. Each task should produce self-con
 
 ## Tracer Bullet Decomposition
 
-Prefer vertical tracer bullet tasks over horizontal slice tasks. Each task should
-deliver a narrow but complete path through the relevant layers and be demoable or
-verifiable on its own.
-
-Horizontal slice tasks are a red flag:
-- "Add the database tables"
-- "Build the API layer"
-- "Create the UI"
-- "Write the tests"
-
-Use a horizontal foundation task only when it is genuinely required to unblock a
-vertical slice and has its own concrete acceptance criteria. Otherwise split the
-work into thinner end-to-end tasks.
+Prefer vertical tracer bullet tasks — each delivers a narrow but complete path through the layers, demoable or verifiable on its own — over horizontal slice tasks ("add the database tables", "build the API layer", "create the UI", "write the tests"), which are a red flag. Use a horizontal foundation task only when it genuinely unblocks a vertical slice and has its own acceptance criteria; otherwise split into thinner end-to-end tasks.
 
 ## Plan Fidelity Tiers
 
@@ -111,6 +99,9 @@ Use this structure at the selected fidelity tier. Full-code plans should include
 - Modify: `exact/path/to/existing.py:123-145`
 - Test: `tests/exact/path/to/test.py`
 
+**Test-first:** [name the RED test this slice adds, or "N/A — no behavior change" + reason]
+**Parallel:** [parallel-safe | sequential: needs Task N]
+
 - [ ] **Step 1: Write the failing test**
 
 ```python
@@ -153,12 +144,6 @@ Every step must contain the actual content an engineer needs at the selected fid
 - "Similar to Task N" (repeat the code — the engineer may be reading tasks out of order)
 - Steps that describe what to do without showing how at the selected fidelity tier
 - References to types, functions, or methods not defined in any task
-
-## Remember
-- Exact file paths always
-- Match code detail to the chosen fidelity tier; full-code plans require complete code blocks, lower tiers require enough concrete detail to prevent wrong implementation
-- Exact commands with expected output
-- DRY, YAGNI, TDD, frequent commits
 
 ## Self-Review
 
@@ -208,7 +193,7 @@ spec before execution handoff.
 - In Codex, the reviewer is Claude.
 - In Claude Code, the reviewer is Codex.
 - When Codex calls Claude for peer review, pin Claude to
-  `--model claude-opus-4-7` rather than the floating `opus` alias.
+  `--model claude-opus-4-8` rather than the floating `opus` alias.
 - If Claude Code calls Codex for peer review, default the Codex reviewer to
   `-m gpt-5.5`. If the user asks for a fast Codex review lane, also add
   `-c 'service_tier="fast"'`. For lightweight planning/review tasks, pair it

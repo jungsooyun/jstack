@@ -122,6 +122,8 @@ You MUST complete each phase before proceeding to the next.
    - Keep tracing up until you find the source
    - Fix at source, not at symptom
 
+When reading logs/output for root cause, route large captures through processing tools (CLAUDE.md context_routing) and inspect summaries — do not dump raw logs into context.
+
 ### Phase 2: Pattern Analysis
 
 **Find the pattern before fixing:**
@@ -215,6 +217,14 @@ You MUST complete each phase before proceeding to the next.
 
    This is NOT a failed hypothesis - this is a wrong architecture.
 
+## Escalation to codex:rescue
+
+Run Phases 1-3 first — one hypothesis at a time. Escalate to `codex:rescue` ONLY when:
+- a root-cause hypothesis survives repeated falsification attempts and you still cannot localize the defect, or
+- the investigation is cycling (same hypotheses re-tried with no new evidence).
+
+codex:rescue is a second pair of eyes AFTER the discipline, not a replacement for Phase 1. Bring your surviving hypothesis and the evidence that killed the others.
+
 ## Red Flags - STOP and Follow Process
 
 If you catch yourself thinking:
@@ -236,14 +246,12 @@ If you catch yourself thinking:
 
 ## your human partner's Signals You're Doing It Wrong
 
-**Watch for these redirections:**
-- "Is that not happening?" - You assumed without verifying
-- "Will it show us...?" - You should have added evidence gathering
-- "Stop guessing" - You're proposing fixes without understanding
-- "Ultrathink this" - Question fundamentals, not just symptoms
-- "We're stuck?" (frustrated) - Your approach isn't working
-
-**When you see these:** STOP. Return to Phase 1.
+These redirections mean STOP and return to Phase 1:
+- "Is that not happening?" - assumed without verifying
+- "Will it show us...?" - missing evidence gathering
+- "Stop guessing" - proposing fixes without understanding
+- "Ultrathink this" - question fundamentals, not symptoms
+- "We're stuck?" (frustrated) - your approach isn't working
 
 ## Common Rationalizations
 
@@ -290,11 +298,3 @@ These techniques are part of systematic debugging and available in this director
 **Related skills:**
 - **jstack:test-driven-development** - For creating failing test case (Phase 4, Step 1)
 - **jstack:verification-before-completion** - Verify fix worked before claiming success
-
-## Real-World Impact
-
-From debugging sessions:
-- Systematic approach: 15-30 minutes to fix
-- Random fixes approach: 2-3 hours of thrashing
-- First-time fix rate: 95% vs 40%
-- New bugs introduced: Near zero vs common
