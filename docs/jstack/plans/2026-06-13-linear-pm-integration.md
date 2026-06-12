@@ -191,18 +191,18 @@ git commit -m "feat: add project-management skill (Linear-backed PM layer)"
 **Test-first:** covered by Task 6 scenario (c) and pressure test (a).
 **Parallel:** sequential: needs Task 3 (references the new skill by name)
 
-- [ ] **Step 1: Add entry branch** — in the checklist near item 1 and in "The Process > Understanding the idea": if the build target itself is undecided ("다음 뭐 하지" style entry), invoke `jstack:project-management` (next mode) first, then return here with the chosen issue.
+- [x] **Step 1: Add entry branch** — in the checklist near item 1 and in "The Process > Understanding the idea": if the build target itself is undecided ("다음 뭐 하지" style entry), invoke `jstack:project-management` (next mode) first, then return here with the chosen issue.
 
-- [ ] **Step 2: Add Linear linking to the "After the Design" documentation flow**, preserving peer-review-fixed sequencing:
+- [x] **Step 2: Add Linear linking to the "After the Design" documentation flow**, preserving peer-review-fixed sequencing:
   - BEFORE writing the spec file: ensure the Linear issue exists (create via `jstack:project-management` capture conventions if missing) so `linear-issue: <ID>` frontmatter is in the spec's initial commit.
   - If issue creation FAILS at this point (Linear unavailable): **omit the `linear-issue:` frontmatter line entirely** — no placeholder values — write and commit the spec normally, and announce "Linear sync skipped — manual reconciliation needed (add linear-issue frontmatter + create the issue later, e.g. via project-management groom)."
   - Right after the spec commit: set the spec path in the Linear issue description.
   - AFTER the User Review Gate passes: move the issue to In Progress.
   - On any other Linear failure: do not block; state "Linear sync skipped — manual reconciliation needed."
 
-- [ ] **Step 3: Add "later" idea capture** — one line in "Understanding the idea": ideas deferred during brainstorming are captured as Backlog issues (project-management capture mode).
+- [x] **Step 3: Add "later" idea capture** — one line in "Understanding the idea": ideas deferred during brainstorming are captured as Backlog issues (project-management capture mode).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add skills/brainstorming/SKILL.md

@@ -35,7 +35,7 @@ After user approval of a micro-design, transition directly to writing-plans. The
 
 You MUST create a task for each of these items and complete them in order:
 
-1. **Explore project context** — check files, docs, recent commits
+1. **Explore project context** — check files, docs, recent commits. If the build target itself is undecided ("다음 뭐 하지" style entry, no specific feature in mind), invoke `jstack:project-management` (next mode) FIRST to pick an issue from Linear, then return here with the chosen issue.
 2. **Problem Framing Gate** — confirm the real bottleneck, owner boundary, smallest evidence-producing wedge, and success evidence before feature details
 3. **Offer visual companion** (if topic will involve visual questions) — this is its own message, not combined with a clarifying question. See the Visual Companion section below.
 4. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
@@ -97,6 +97,8 @@ digraph brainstorming {
 **Understanding the idea:**
 
 - Check out the current project state first (files, docs, recent commits)
+- **Undecided build target:** if the user does not yet know what to build (e.g., "다음 뭐 하지?"), invoke `jstack:project-management` (next mode) to recommend a Linear issue, then return here with the chosen issue (and its issue ID) as context.
+- **"Later" ideas:** if an idea surfaces that is out of scope for the current design, capture it as a Backlog issue via `jstack:project-management` (capture mode) instead of leaving it to evaporate in the conversation.
 - When exploring project context, scope searches from owned paths and keep wide/unpredictable-output searches out of context (CLAUDE.md context_routing if available; otherwise narrow native search).
 - Run the **Problem Framing Gate** before feature details when the request could change product scope, architecture, live operations, money movement, security, exchange behavior, or cross-repo boundaries:
   - What is the actual bottleneck or failure mode this work removes?
@@ -150,11 +152,15 @@ digraph brainstorming {
   - If a decision is hard to reverse, surprising without context, and the result
     of a real trade-off, offer an ADR using `adr-format.md`. Do not create ADRs
     for obvious or reversible choices.
+- **Before writing the spec file — ensure the Linear issue exists:** so that `linear-issue: <ID>` frontmatter is part of the spec's INITIAL commit (no amend, no second commit). If the issue already came from `jstack:project-management` next mode, reuse its ID. Otherwise create it now using the `jstack:project-management` capture conventions (team Jephalabs, state Backlog).
+  - **If issue creation FAILS here (Linear unavailable):** OMIT the `linear-issue:` frontmatter line entirely — no placeholder values — write and commit the spec normally, and announce: "Linear sync skipped — manual reconciliation needed (add linear-issue frontmatter + create the issue later, e.g. via project-management groom)."
 - Write the validated design (spec) to `docs/jstack/specs/YYYY-MM-DD-<topic>-design.md`
   - (User preferences for spec location override this default)
   - When continuing older work, read existing `docs/superpowers/specs/` specs as legacy inputs, but write new specs under `docs/jstack/specs/`.
+  - Include `linear-issue: <ID>` in the spec's YAML frontmatter when the issue exists (omitted only on the Linear-failure path above).
 - Use elements-of-style:writing-clearly-and-concisely skill if available
 - Commit the design document to git
+- **Right after the spec commit:** set the spec file path in the Linear issue's description (via `jstack:project-management` capture conventions / `save_issue`). On any Linear failure here, do not block — announce "Linear sync skipped — manual reconciliation needed."
 
 **Spec Self-Review:**
 After writing the spec document, look at it with fresh eyes:
@@ -185,6 +191,8 @@ After the spec peer-review gate passes, ask the user to review the written spec 
 > "Spec written and committed to `<path>`. Please review it and let me know if you want to make any changes before we start writing out the implementation plan. If you approve the spec and want plan + implementation to proceed autonomously, say that explicitly."
 
 Wait for the user's response. If they request changes, make them and re-run the peer-review gate when the changes materially affect requirements, scope, architecture, tests, or sequencing. Only proceed once the user approves.
+
+**After the User Review Gate passes — move the Linear issue to In Progress** (`save_issue` state = "In Progress"). The link is recorded at spec-commit time, but the status transition happens only at approval time — a spec that fails review never shows as In Progress. On any Linear failure, do not block: announce "Linear sync skipped — manual reconciliation needed."
 
 **Implementation:**
 
