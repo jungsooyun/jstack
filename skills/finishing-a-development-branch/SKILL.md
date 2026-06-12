@@ -65,6 +65,28 @@ git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
 
 Or ask: "This branch split from main - is that correct?"
 
+### Step 3.5: Locate Linked Linear Issue
+
+Find the Linear issue linked to this branch's work before touching status:
+
+```bash
+scripts/find-linear-issue.sh <base-branch>
+```
+
+The script scans spec/plan files changed on this branch for `linear-issue:`
+frontmatter and prints matched issue ID(s), one per line (empty output = no
+match). It lives in the jstack repo; **in other repos**, fall back to the same
+scan inline: `git diff --name-only <base>...HEAD -- docs/` then read the leading
+YAML frontmatter of each file for a `linear-issue:` value.
+
+- **Exactly one ID** → proceed with it through Step 5.
+- **Zero or multiple IDs** → ask the user which issue (or none) applies. Never
+  guess.
+
+Only apply status transitions (Step 5) when exactly one issue is confirmed. If
+the Linear MCP is unavailable, proceed with the git workflow and announce
+"Linear sync skipped — manual reconciliation needed."
+
 ### Step 4: Present Options
 
 **Normal repo and named-branch worktree — present exactly these 4 options:**
@@ -120,6 +142,12 @@ Then: Cleanup worktree (Step 6), then delete branch:
 git branch -d <feature-branch>
 ```
 
+**Linear status (Done means merged, not submitted):** after the merge succeeds
+and tests pass on the merged result, move the linked issue to **Done**
+(`save_issue` state = "Done") and add a comment (`save_comment`) with the merge
+commit. On any Linear failure, proceed and announce "Linear sync skipped —
+manual reconciliation needed."
+
 #### Option 2: Push and Create PR
 
 ```bash
@@ -139,11 +167,19 @@ EOF
 
 **Do NOT clean up worktree** — user needs it alive to iterate on PR feedback.
 
+**Linear status:** PR creation is NOT completion. Keep the linked issue **In
+Progress** and add a comment (`save_comment`) with the PR link. The issue moves
+to Done later — only when the user confirms the PR merged (a subsequent finishing
+run or explicit user statement). On any Linear failure, proceed and announce
+"Linear sync skipped — manual reconciliation needed."
+
 #### Option 3: Keep As-Is
 
 Report: "Keeping branch <name>. Worktree preserved at <path>."
 
 **Don't cleanup worktree.**
+
+**Linear status:** no status change.
 
 #### Option 4: Discard
 
@@ -169,6 +205,11 @@ Then: Cleanup worktree (Step 6), then force-delete branch:
 ```bash
 git branch -D <feature-branch>
 ```
+
+**Linear status:** ask the user whether to move the linked issue back to
+**Backlog** (the idea is still valid) or to **Canceled** (dropped), and apply the
+chosen state (`save_issue`). On any Linear failure, proceed and announce "Linear
+sync skipped — manual reconciliation needed."
 
 ### Step 6: Cleanup Workspace
 

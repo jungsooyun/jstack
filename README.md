@@ -138,6 +138,8 @@ refreshes.
   code-quality review, and risk-based final challenge.
 - `executing-plans` - inline/batch execution for smaller or tightly coupled work.
 - `peer-review` - opposite-agent review, adversarial challenge, artifacts, and triage.
+- `project-management` - Linear-backed PM layer (capture/next/groom/plan-milestone);
+  Linear is the source of truth for backlog, priorities, and goals. Fork-only.
 
 **Engineering discipline**
 - `test-driven-development` - red/green/refactor discipline.

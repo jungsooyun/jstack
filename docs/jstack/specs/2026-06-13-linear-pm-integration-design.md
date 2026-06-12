@@ -106,5 +106,5 @@ Skills are behavior-shaping documents, not code. Following `jstack:writing-skill
 | Plan Review | GPT/Claude | 0 | Pending | - | - |
 | Peer Review | Codex | 1 | Pass (post-fix) | All 5 findings accepted and applied | .jstack/artifacts/peer-review-codex-plan-20260613T005900Z.md |
 | Adversarial Review | Claude/Codex | 0 | Pending | - | - |
-| Verification | Scenario runs | 0 | Pending | - | - |
-| Live Evidence | Linear workspace inspection | 0 | Pending | - | - |
+| Verification | Scenario runs | 1 | Pass (GREEN + 4 pressure) | 8/8 scenarios pass; no REFACTOR needed | .jstack/artifacts/linear-pm-verification/green-and-pressure.md |
+| Live Evidence | Jephalabs workspace | 1 | Pass | JEP-5 Backlog/no-prio, JEP-6 In Progress→Done+comment, JEP-7 stays In Progress; `[test]` fixtures cleaned (Canceled) | .jstack/artifacts/linear-pm-verification/green-and-pressure.md |
