@@ -64,11 +64,12 @@ TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 fail() { echo "FAIL: $1" >&2; exit 1; }
 
 cd "$TMP" && git init -q -b main && git config user.email t@t && git config user.name t
-mkdir -p docs/jstack/specs
 git commit -q --allow-empty -m root
 
+# Empty dirs are not tracked by git: re-mkdir after every checkout that writes specs.
 # Case 1: one spec with frontmatter on branch -> prints exactly "JEP-42"
 git checkout -q -b feat-a
+mkdir -p docs/jstack/specs
 printf -- '---\nlinear-issue: JEP-42\n---\n# Spec A\n' > docs/jstack/specs/a-design.md
 git add -A && git commit -q -m a
 out=$("$SCRIPT" main)
@@ -81,6 +82,7 @@ out=$("$SCRIPT" main) && [ -z "$out" ] || fail "case2 expected empty/exit0"
 
 # Case 3: two specs -> two lines, sorted unique
 git checkout -q main && git checkout -q -b feat-c
+mkdir -p docs/jstack/specs
 printf -- '---\nlinear-issue: JEP-7\n---\n' > docs/jstack/specs/c1-design.md
 printf -- '---\nlinear-issue: JEP-9\n---\n' > docs/jstack/specs/c2-design.md
 git add -A && git commit -q -m c
@@ -89,6 +91,7 @@ out=$("$SCRIPT" main)
 
 # Case 4: frontmatter only honored in first block (linear-issue in body ignored)
 git checkout -q main && git checkout -q -b feat-d
+mkdir -p docs/jstack/specs
 printf -- '# Doc\n\nbody mentions linear-issue: JEP-99 but no frontmatter\n' > docs/jstack/specs/d-design.md
 git add -A && git commit -q -m d
 out=$("$SCRIPT" main) && [ -z "$out" ] || fail "case4 expected empty, got: $out"
@@ -96,7 +99,7 @@ out=$("$SCRIPT" main) && [ -z "$out" ] || fail "case4 expected empty, got: $out"
 echo "PASS"
 ```
 
-- [ ] **Step 2: Run test to verify it fails** — `bash tests/find-linear-issue/test.sh` → expected: FAIL (script not found).
+- [ ] **Step 2: Run test to verify it fails** — `bash tests/find-linear-issue/test.sh` → expected: exit 127 with shell error `.../scripts/find-linear-issue.sh: No such file or directory` (the script doesn't exist yet — this IS the RED; no `PASS` output).
 
 - [ ] **Step 3: Implement the script**
 
@@ -162,7 +165,7 @@ Required sections, in order:
 1. **Overview** — Linear is the source of truth; announce-at-start line ("I'm using the project-management skill...").
 2. **Linear Conventions** — copy the spec's conventions table VERBATIM (Team Jephalabs / Project=product / Milestone=goal / Issue=spec unit / states Backlog→Todo→In Progress→Done→Canceled / priority unset at capture / `linear-issue:` frontmatter contract).
 3. **Modes** — four subsections, each: trigger phrases, exact MCP tools used, step list, what NOT to do:
-   - **capture**: `save_issue` (team Jephalabs, state Backlog, title + 1-line description, project assignment; ask which project ONLY if genuinely ambiguous). No priority, no milestone at capture.
+   - **capture**: `save_issue` (team Jephalabs, state Backlog, title + 1-line description, project assignment; ask which project ONLY if genuinely ambiguous). No priority, no milestone at capture. **Missing project branch:** check via `list_projects`; if no matching project exists, propose creating one (`save_project`) and get user confirmation before creating — never create a project silently, and never file the issue project-less without telling the user.
    - **next**: `list_issues` (states Backlog/Todo, order by priority then milestone) → recommend ≤3 candidates with one-line reasons → on selection, hand off to `jstack:brainstorming` with the issue as context and the issue ID for later linking.
    - **groom**: `list_issues` + `save_issue` + `save_comment`; flag stale (>30d untouched), propose duplicate merges and priority changes — every mutation individually confirmed by the user, no silent bulk edits.
    - **plan-milestone**: `save_milestone` + assign issues; milestone = goal bundle, Cycles unused.
@@ -192,9 +195,10 @@ git commit -m "feat: add project-management skill (Linear-backed PM layer)"
 
 - [ ] **Step 2: Add Linear linking to the "After the Design" documentation flow**, preserving peer-review-fixed sequencing:
   - BEFORE writing the spec file: ensure the Linear issue exists (create via `jstack:project-management` capture conventions if missing) so `linear-issue: <ID>` frontmatter is in the spec's initial commit.
+  - If issue creation FAILS at this point (Linear unavailable): **omit the `linear-issue:` frontmatter line entirely** — no placeholder values — write and commit the spec normally, and announce "Linear sync skipped — manual reconciliation needed (add linear-issue frontmatter + create the issue later, e.g. via project-management groom)."
   - Right after the spec commit: set the spec path in the Linear issue description.
   - AFTER the User Review Gate passes: move the issue to In Progress.
-  - On Linear failure: do not block; state "Linear sync skipped — manual reconciliation needed."
+  - On any other Linear failure: do not block; state "Linear sync skipped — manual reconciliation needed."
 
 - [ ] **Step 3: Add "later" idea capture** — one line in "Understanding the idea": ideas deferred during brainstorming are captured as Backlog issues (project-management capture mode).
 
@@ -246,7 +250,7 @@ git commit -m "feat: add Linear status transitions to finishing-a-development-br
 
 - [ ] **Step 2: GREEN scenarios** (fresh sessions, skill installed) — rerun Task 1's three scenarios. Expected: (1) capture creates a real Backlog issue in Jephalabs; (2) next consults Linear and recommends with priority reasons; (3) finishing Option 1 → Done with comment, and separately Option 2 → stays In Progress with PR-link comment (two runs).
 
-- [ ] **Step 3: Pressure scenarios** — (a) clear feature request "X 기능 만들어줘" must NOT detour through project-management; (b) finish a branch with no linked spec → agent asks, does not guess; (c) with Linear MCP disabled, capture states the idea was NOT saved, touchpoints announce skipped sync without blocking.
+- [ ] **Step 3: Pressure scenarios** — (a) clear feature request "X 기능 만들어줘" must NOT detour through project-management; (b) finish a branch with no linked spec → agent asks, does not guess; (c) with Linear MCP disabled, capture states the idea was NOT saved, touchpoints announce skipped sync without blocking; (d) capture an idea for a product with no existing Linear project → agent runs `list_projects`, proposes project creation, and waits for user confirmation before `save_project`.
 
 - [ ] **Step 4: Live evidence** — inspect the Jephalabs workspace (list_issues) after each GREEN run; states/links must match the conventions table. Record before/after in `green-and-pressure.md`. If any scenario fails, fix the skill text (REFACTOR), rerun that scenario, and record the second run.
 
@@ -264,8 +268,8 @@ git commit -m "test: GREEN + pressure verification evidence for Linear PM integr
 | Check | Reviewer | Runs | Status | Findings | Artifact |
 |---|---|---:|---|---|---|
 | Spec Review | Codex | 1 | Issues Found → Fixed | 5 blocking, all applied | .jstack/artifacts/peer-review-codex-plan-20260613T005900Z.md |
-| Plan Review | Codex | 0 | Pending | - | - |
-| Peer Review | Codex | 1 | Pass (post-fix, spec) | - | .jstack/artifacts/peer-review-codex-plan-20260613T005900Z.md |
+| Plan Review | Codex | 1 | Issues Found → Fixed | 4 blocking: test fixture mkdir, RED expectation exit-127, Linear-fail-before-spec rule, missing-project branch | .jstack/artifacts/peer-review-codex-plan-20260613T012500Z.md |
+| Peer Review | Codex | 2 | Pass (post-fix, spec+plan) | - | .jstack/artifacts/peer-review-codex-plan-20260613T012500Z.md |
 | Adversarial Review | Claude/Codex | 0 | Pending | - | - |
 | Verification | Scenario runs | 0 | Pending | - | - |
 | Live Evidence | Jephalabs workspace | 0 | Pending | - | - |
