@@ -219,16 +219,16 @@ git commit -m "feat: add Linear issue touchpoints to brainstorming skill"
 **Test-first:** covered by Task 6 scenario (c) and pressure tests (b)(c).
 **Parallel:** sequential: needs Task 2 (references the script) and Task 3 (references conventions)
 
-- [ ] **Step 1: Add "Step 3.5: Locate Linked Linear Issue"** — run `scripts/find-linear-issue.sh <base-branch>` (note: script lives in the jstack repo; in other repos, fall back to the same `git diff --name-only <base>...HEAD -- docs/` + frontmatter scan inline). Exactly one ID → proceed with it. Zero or multiple → ask the user which issue (or none) applies. Never guess.
+- [x] **Step 1: Add "Step 3.5: Locate Linked Linear Issue"** — run `scripts/find-linear-issue.sh <base-branch>` (note: script lives in the jstack repo; in other repos, fall back to the same `git diff --name-only <base>...HEAD -- docs/` + frontmatter scan inline). Exactly one ID → proceed with it. Zero or multiple → ask the user which issue (or none) applies. Never guess.
 
-- [ ] **Step 2: Add status transitions per option** (Done means merged, not submitted):
+- [x] **Step 2: Add status transitions per option** (Done means merged, not submitted):
   - Option 1 (merge locally): after merge succeeds and tests pass → issue to Done + comment with merge commit.
   - Option 2 (push & PR): keep In Progress + comment the PR link; Done happens later when the user confirms merge.
   - Option 3 (keep as-is): no status change.
   - Option 4 (discard): ask Backlog (still valid) vs Canceled (dropped).
   - Any Linear failure: proceed with git workflow, announce "Linear sync skipped — manual reconciliation needed."
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/finishing-a-development-branch/SKILL.md
