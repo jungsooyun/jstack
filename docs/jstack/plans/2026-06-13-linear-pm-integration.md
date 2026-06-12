@@ -246,15 +246,15 @@ git commit -m "feat: add Linear status transitions to finishing-a-development-br
 **Test-first:** N/A — this IS the GREEN/pressure phase.
 **Parallel:** sequential: needs Tasks 2-5
 
-- [ ] **Step 1: Update README skill list** and run `scripts/sync-local-hosts.sh --dry-run`; if it reports pending host sync for the new skill, run `--apply`.
+- [x] **Step 1: Update README skill list** and run `scripts/sync-local-hosts.sh --dry-run`; if it reports pending host sync for the new skill, run `--apply`. (Dry-run reported all symlinks `ok`; skills are exposed via the existing `jstack` directory symlink, so no per-skill `--apply` was needed — the new skill is live at `~/.codex/skills/jstack/project-management/`.)
 
-- [ ] **Step 2: GREEN scenarios** (fresh sessions, skill installed) — rerun Task 1's three scenarios. Expected: (1) capture creates a real Backlog issue in Jephalabs; (2) next consults Linear and recommends with priority reasons; (3) finishing Option 1 → Done with comment, and separately Option 2 → stays In Progress with PR-link comment (two runs).
+- [x] **Step 2: GREEN scenarios** (fresh sessions, skill installed) — rerun Task 1's three scenarios. Expected: (1) capture creates a real Backlog issue in Jephalabs; (2) next consults Linear and recommends with priority reasons; (3) finishing Option 1 → Done with comment, and separately Option 2 → stays In Progress with PR-link comment (two runs).
 
-- [ ] **Step 3: Pressure scenarios** — (a) clear feature request "X 기능 만들어줘" must NOT detour through project-management; (b) finish a branch with no linked spec → agent asks, does not guess; (c) with Linear MCP disabled, capture states the idea was NOT saved, touchpoints announce skipped sync without blocking; (d) capture an idea for a product with no existing Linear project → agent runs `list_projects`, proposes project creation, and waits for user confirmation before `save_project`.
+- [x] **Step 3: Pressure scenarios** — (a) clear feature request "X 기능 만들어줘" must NOT detour through project-management; (b) finish a branch with no linked spec → agent asks, does not guess; (c) with Linear MCP disabled, capture states the idea was NOT saved, touchpoints announce skipped sync without blocking; (d) capture an idea for a product with no existing Linear project → agent runs `list_projects`, proposes project creation, and waits for user confirmation before `save_project`.
 
-- [ ] **Step 4: Live evidence** — inspect the Jephalabs workspace (list_issues) after each GREEN run; states/links must match the conventions table. Record before/after in `green-and-pressure.md`. If any scenario fails, fix the skill text (REFACTOR), rerun that scenario, and record the second run.
+- [x] **Step 4: Live evidence** — inspect the Jephalabs workspace (list_issues) after each GREEN run; states/links must match the conventions table. Record before/after in `green-and-pressure.md`. If any scenario fails, fix the skill text (REFACTOR), rerun that scenario, and record the second run.
 
-- [ ] **Step 5: Update the spec's `## JSTACK REVIEW REPORT`** (Verification + Live Evidence rows) and commit:
+- [x] **Step 5: Update the spec's `## JSTACK REVIEW REPORT`** (Verification + Live Evidence rows) and commit:
 
 ```bash
 git add README.md .jstack/artifacts/linear-pm-verification/green-and-pressure.md docs/jstack/specs/2026-06-13-linear-pm-integration-design.md
@@ -271,8 +271,8 @@ git commit -m "test: GREEN + pressure verification evidence for Linear PM integr
 | Plan Review | Codex | 1 | Issues Found → Fixed | 4 blocking: test fixture mkdir, RED expectation exit-127, Linear-fail-before-spec rule, missing-project branch | .jstack/artifacts/peer-review-codex-plan-20260613T012500Z.md |
 | Peer Review | Codex | 2 | Pass (post-fix, spec+plan) | - | .jstack/artifacts/peer-review-codex-plan-20260613T012500Z.md |
 | Adversarial Review | Claude/Codex | 0 | Pending | - | - |
-| Verification | Scenario runs | 0 | Pending | - | - |
-| Live Evidence | Jephalabs workspace | 0 | Pending | - | - |
+| Verification | Scenario runs | 1 | Pass (GREEN + 4 pressure) | 8/8 scenarios pass; no REFACTOR needed | .jstack/artifacts/linear-pm-verification/green-and-pressure.md |
+| Live Evidence | Jephalabs workspace | 1 | Pass | JEP-5/6/7 states match conventions; `[test]` fixtures cleaned (Canceled) | .jstack/artifacts/linear-pm-verification/green-and-pressure.md |
 
 ## Execution Handoff
 
