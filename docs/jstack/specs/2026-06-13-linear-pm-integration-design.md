@@ -1,8 +1,9 @@
 # Linear PM Integration — Design
 
 **Date:** 2026-06-13
-**Status:** Approved by user (conversation), pending peer review
+**Status:** Approved by user (conversation), peer-reviewed
 **Owner:** jstack (this repo)
+**Scope note:** This is a **fork-only** feature. The Linear/Jephalabs integration is personal configuration by upstream Superpowers standards (third-party tool dependency) and must never be proposed upstream. It lives in this fork's `skills/` namespace deliberately.
 
 ## Problem
 
@@ -55,12 +56,19 @@ The user has adopted Linear (workspace team: **Jephalabs**, currently empty — 
 ### 2. Touchpoint: `skills/brainstorming/SKILL.md` (minimal edits)
 
 1. Entry branch: if the build target is undecided, invoke `jstack:project-management` (next mode) first.
-2. After the spec is committed: link the Linear issue — set spec path in issue description, add `linear-issue:` frontmatter to the spec, move issue to In Progress. If no issue exists yet, create one on the spot.
-3. When "later" ideas surface during brainstorming: capture them as Backlog issues.
+2. **Before writing the spec file**: ensure the Linear issue exists (create it if missing) so the `linear-issue:` frontmatter is part of the spec's initial commit — no amend or second commit needed. Set the spec path in the issue description right after the commit.
+3. **After the user approves the spec** (User Review Gate passes): move the issue to In Progress. Linking happens at commit time; the status transition happens at approval time — a spec that fails review never shows as In Progress.
+4. When "later" ideas surface during brainstorming: capture them as Backlog issues.
 
 ### 3. Touchpoint: `skills/finishing-a-development-branch/SKILL.md` (minimal edits)
 
-On merge/PR completion: move the linked issue to Done and add a comment with the commit/PR link. On discard (Option 4): ask whether to move the issue back to Backlog or to Canceled.
+**Issue discovery step (runs first):** find the linked issue by scanning the spec/plan files touched on this branch (`git diff --name-only <base>...HEAD -- docs/`) for `linear-issue:` frontmatter. If no match or multiple matches, ask the user which issue (or none) applies. Only proceed to status updates when exactly one issue is confirmed.
+
+**Status transitions by option (Done means merged, not submitted):**
+- **Option 1 (merge locally):** after the merge succeeds and tests pass → move issue to Done + comment with the merge commit.
+- **Option 2 (push & create PR):** PR creation is NOT completion. Keep the issue In Progress and comment the PR link. The issue moves to Done later — when the user confirms the PR merged (e.g., a subsequent finishing run or explicit user statement).
+- **Option 3 (keep as-is):** no status change.
+- **Option 4 (discard):** ask whether to move the issue back to Backlog (idea still valid) or to Canceled (dropped).
 
 ## Failure / Offline Handling
 
@@ -78,19 +86,20 @@ On merge/PR completion: move the linked issue to Done and add a comment with the
 
 ## Verification
 
-Skills are behavior-shaping documents, not code. Following `jstack:writing-skills`:
+Skills are behavior-shaping documents, not code. Following `jstack:writing-skills`, verification must meet the baseline-first / red-green bar, not just happy paths:
 
-1. Run three real scenarios in fresh sessions: (a) idea capture mid-conversation, (b) "다음 뭐 하지?" → next-mode recommendation → brainstorming handoff, (c) spec completion → issue link → branch finish → Done transition.
-2. Inspect the Jephalabs workspace after each scenario: issues, states, milestones, and links must match the conventions table.
-3. Pressure-test trigger boundaries: a clear feature request ("build X") must NOT detour through the PM skill.
+1. **Baseline (RED) first:** before adding any skill content, run the three scenarios below in fresh sessions WITHOUT the new skill and record the failure mode (idea evaporates, no next-work recommendation, no status transition). The plan must capture these baseline transcripts as before-evidence.
+2. **Scenario runs (GREEN):** with the skill installed, rerun: (a) idea capture mid-conversation, (b) "다음 뭐 하지?" → next-mode recommendation → brainstorming handoff, (c) spec completion → issue link → branch finish (Option 1 and Option 2 separately — Option 2 must NOT produce Done).
+3. **Pressure / adversarial trigger tests:** (a) a clear feature request ("build X") must NOT detour through the PM skill; (b) finishing a branch with no linked spec must ask, not guess; (c) Linear MCP disconnected must degrade per the failure-handling rules, not block or silently fake success.
+4. **Live evidence:** inspect the Jephalabs workspace after each scenario — issues, states, milestones, and links must match the conventions table. Record before/after outcomes in the plan's review report.
 
 ## JSTACK REVIEW REPORT
 
 | Check | Reviewer | Runs | Status | Findings | Artifact |
 |---|---|---:|---|---|---|
-| Spec Review | Codex | 0 | Pending | - | - |
+| Spec Review | Codex | 1 | Issues Found → Fixed | 5 blocking: fork-only scope, Done-on-merge semantics, issue discovery step, link-before-commit sequencing, verification bar | .jstack/artifacts/peer-review-codex-plan-20260613T005900Z.md |
 | Plan Review | GPT/Claude | 0 | Pending | - | - |
-| Peer Review | Codex | 0 | Pending | - | - |
+| Peer Review | Codex | 1 | Pass (post-fix) | All 5 findings accepted and applied | .jstack/artifacts/peer-review-codex-plan-20260613T005900Z.md |
 | Adversarial Review | Claude/Codex | 0 | Pending | - | - |
 | Verification | Scenario runs | 0 | Pending | - | - |
 | Live Evidence | Linear workspace inspection | 0 | Pending | - | - |
