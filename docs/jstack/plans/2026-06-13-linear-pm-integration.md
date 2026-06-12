@@ -53,7 +53,7 @@ git commit -m "test: record baseline (RED) evidence for Linear PM skill scenario
 **Test-first:** `test.sh` written and failing (script missing) before implementation.
 **Parallel:** parallel-safe
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```bash
 #!/usr/bin/env bash
@@ -99,9 +99,9 @@ out=$("$SCRIPT" main) && [ -z "$out" ] || fail "case4 expected empty, got: $out"
 echo "PASS"
 ```
 
-- [ ] **Step 2: Run test to verify it fails** — `bash tests/find-linear-issue/test.sh` → expected: exit 127 with shell error `.../scripts/find-linear-issue.sh: No such file or directory` (the script doesn't exist yet — this IS the RED; no `PASS` output).
+- [x] **Step 2: Run test to verify it fails** — `bash tests/find-linear-issue/test.sh` → expected: exit 127 with shell error `.../scripts/find-linear-issue.sh: No such file or directory` (the script doesn't exist yet — this IS the RED; no `PASS` output).
 
-- [ ] **Step 3: Implement the script**
+- [x] **Step 3: Implement the script**
 
 ```bash
 #!/usr/bin/env bash
@@ -131,9 +131,9 @@ done | sort -u
 
 `chmod +x scripts/find-linear-issue.sh`
 
-- [ ] **Step 4: Run test to verify it passes** — `bash tests/find-linear-issue/test.sh` → expected: `PASS`.
+- [x] **Step 4: Run test to verify it passes** — `bash tests/find-linear-issue/test.sh` → expected: `PASS`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/find-linear-issue.sh tests/find-linear-issue/test.sh
