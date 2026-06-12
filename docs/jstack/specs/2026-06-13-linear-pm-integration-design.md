@@ -62,7 +62,7 @@ The user has adopted Linear (workspace team: **Jephalabs**, currently empty — 
 
 ### 3. Touchpoint: `skills/finishing-a-development-branch/SKILL.md` (minimal edits)
 
-**Issue discovery step (runs first):** find the linked issue by scanning the spec/plan files touched on this branch (`git diff --name-only <base>...HEAD -- docs/`) for `linear-issue:` frontmatter. If no match or multiple matches, ask the user which issue (or none) applies. Only proceed to status updates when exactly one issue is confirmed.
+**Issue discovery step (runs first):** find the linked issue by running `scripts/find-linear-issue.sh <base-branch>` — a zero-dependency bash script that scans spec/plan files touched on this branch (`git diff --name-only <base>...HEAD -- docs/`) for `linear-issue:` frontmatter and prints the matched issue ID(s), one per line (empty output = no match). Deterministic script beats per-session improvised grep. If no match or multiple matches, ask the user which issue (or none) applies. Only proceed to status updates when exactly one issue is confirmed.
 
 **Status transitions by option (Done means merged, not submitted):**
 - **Option 1 (merge locally):** after the merge succeeds and tests pass → move issue to Done + comment with the merge commit.
@@ -76,9 +76,14 @@ The user has adopted Linear (workspace team: **Jephalabs**, currently empty — 
 - Linear MCP unavailable for the **PM skill itself** (next/groom/plan-milestone): these are meaningless without Linear; state that plainly and stop instead of degrading.
 - capture mode without Linear: fall back to telling the user the idea was NOT saved anywhere (do not silently write a local file — Linear is the single source of truth).
 
+### 4. Helper script: `scripts/find-linear-issue.sh`
+
+Zero-dependency bash (matching repo conventions in `scripts/`). Input: base branch name (default: repo default branch). Output: `linear-issue:` frontmatter values from `docs/**` files changed on the current branch, one per line; exit 0 with empty output when none found. This is the only script — Linear API access stays exclusively in MCP (no duplicate credential path), and backlog reporting is plain MCP queries (YAGNI).
+
 ## Out of Scope (YAGNI)
 
 - Syncing plan tasks as sub-issues.
+- Scripts that call the Linear API directly (js/py) — MCP is the single access path.
 - Cycles, Initiatives (paid feature), multi-team support.
 - Automated/scheduled backlog grooming (the user reviews periodically by asking).
 - Retroactive import of existing specs or todo.md files.
