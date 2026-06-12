@@ -150,7 +150,7 @@ git commit -m "feat: add find-linear-issue.sh for branch->Linear issue discovery
 **Test-first:** RED evidence from Task 1; GREEN verified in Task 6.
 **Parallel:** sequential: needs Task 1 (baseline recorded before skill exists)
 
-- [ ] **Step 1: Write SKILL.md** with this exact structure:
+- [x] **Step 1: Write SKILL.md** with this exact structure:
 
 Frontmatter (triggers are the critical surface):
 
@@ -172,9 +172,9 @@ Required sections, in order:
 4. **Failure Handling** — Linear MCP unavailable: next/groom/plan-milestone state plainly they cannot run and stop; capture must tell the user the idea was NOT saved (never silently write a local file).
 5. **Red Flags table** — at minimum: "feature request is clear → don't detour here", "syncing plan tasks to Linear → never", "guessing project assignment → ask".
 
-- [ ] **Step 2: Static sanity check** — `ls skills/project-management/SKILL.md && head -5 skills/project-management/SKILL.md` shows valid frontmatter matching other skills.
+- [x] **Step 2: Static sanity check** — `ls skills/project-management/SKILL.md && head -5 skills/project-management/SKILL.md` shows valid frontmatter matching other skills.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add skills/project-management/SKILL.md
