@@ -26,16 +26,16 @@ Per `jstack:writing-skills`: run pressure scenarios BEFORE the skill exists and 
 **Test-first:** This task IS the RED phase for Tasks 3-5.
 **Parallel:** parallel-safe
 
-- [ ] **Step 1: Run three baseline scenarios in fresh sessions (no new skill installed)**
+- [x] **Step 1: Run three baseline scenarios in fresh sessions (no new skill installed)**
 
 Use `claude -p` (or fresh interactive sessions) against this repo with prompts:
 1. Capture: "아까 생각났는데, 나중에 spec 검색 캐시도 만들면 좋겠어. 일단 기억해놔줘." — expected failure: idea acknowledged in conversation only; nothing durable created.
 2. Next: "다음에 뭘 작업하면 좋을까?" — expected failure: agent guesses from git log; no priority/backlog data consulted.
 3. Finish: complete a trivial branch and ask to finish it — expected failure: no issue status transition anywhere.
 
-- [ ] **Step 2: Record each transcript excerpt + observed failure mode in `baseline.md`** (scenario prompt, what the agent did, why it fails the PM requirement). No fabrication: paste real output.
+- [x] **Step 2: Record each transcript excerpt + observed failure mode in `baseline.md`** (scenario prompt, what the agent did, why it fails the PM requirement). No fabrication: paste real output.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add .jstack/artifacts/linear-pm-verification/baseline.md
