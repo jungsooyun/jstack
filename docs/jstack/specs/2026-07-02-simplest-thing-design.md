@@ -77,9 +77,10 @@ jstack 파이프라인(brainstorming → writing-plans → 구현 → verificati
 | 파일 | 변경 |
 |---|---|
 | `skills/writing-plans/SKILL.md` | "DRY. YAGNI. TDD." 지점에 확장: 태스크 설계 시 `jstack:simplest-thing`의 Ladder 적용, 태스크별 테스트는 자격 게이트 통과분만 플랜에 포함 |
-| `skills/subagent-driven-development/SKILL.md` | 구현 서브에이전트 프롬프트 템플릿에 Ladder 요약 3~4줄 + `debt:` 마커 컨벤션 주입 (드리프트 방지의 jstack식 등가물) |
+| `skills/subagent-driven-development/implementer-prompt.md` | **실제 행동 파일은 이쪽** — 기존 YAGNI self-review·targeted-tests 지점에 Ladder 요약 3~4줄 + `debt:` 마커 컨벤션 주입 (드리프트 방지의 jstack식 등가물) |
+| `skills/subagent-driven-development/SKILL.md` | simplest-thing 참조 한 줄 |
 | `skills/executing-plans/SKILL.md` | 동일한 짧은 참조 |
-| `skills/test-driven-development/SKILL.md` | RED 섹션 앞에 "테스트 자격 게이트" 참조 추가. **Iron Law·Red-Green 본문 불변** |
+| `skills/test-driven-development/SKILL.md` | RED 앞에 "테스트 자격 게이트" 참조 추가 **+ 스코프 문장 명시 수정**: "every new function/method has a test", "behavior changes always use TDD" 류 문장을 게이트 조건부("게이트를 통과한 로직은 반드시 테스트 먼저")로 교체. **Red-Green-Refactor 절차 본문과 Red Flags 테이블은 불변.** 게이트 없이 참조만 추가하면 양립 불가능한 두 규칙이 공존하게 됨 (peer review #1) |
 | `skills/peer-review/SKILL.md` | `complexity` 모드 추가: 과잉설계만 사냥, 발견당 한 줄 삭제 리스트(`위치: 뭘 지울지 → 뭘로 대체`), 정확성/보안/성능은 명시적 스코프 밖(기존 review 모드 소관). 자격 게이트 최소 테스트(smoke check 1개)는 절대 삭제 플래그 대상 아님 |
 | `skills/project-management/SKILL.md` | debt harvest 터치포인트: `grep -rnE '(#|//|--) ?debt:'` 수확 → capture mode로 Linear 백로그 이슈화 |
 
@@ -88,11 +89,11 @@ jstack 파이프라인(brainstorming → writing-plans → 구현 → verificati
 - `~/.claude/rules/common/testing.md`: "Minimum Test Coverage: 80%"와 "Test Types (ALL required)"를 자격 게이트 기반 문구로 교체. TDD 워크플로(RED→GREEN→IMPROVE)는 유지하되 "Verify coverage (80%+)" 단계를 "자격 게이트 통과 테스트 전부 통과 확인"으로 교체.
 - `~/.claude/rules/common/code-review.md`: 체크리스트의 "Tests exist, coverage ≥ 80%"를 "게이트 통과 로직에 테스트 존재, 전부 통과"로 교체.
 
-이 변경 없이는 전역 rules가 새 스킬과 매 세션 충돌한다 (사용자 확인 완료: 커버리지 매몰 반대).
+이 변경 없이는 전역 rules가 새 스킬과 매 세션 충돌한다. **레포 밖 변경이므로 구현 플랜에서 명시적 별도 태스크로 분리**한다. 사용자 승인 근거: 2026-07-02 대화에서 "커버리지에 매몰되고 싶지 않다" 명시 + 흡수 범위 선택 시 "전역 testing.md의 80% 룰 수정 포함" 옵션 승인 (peer review #5).
 
 ### 4. 검증 (writing-skills 규율)
 
-`jstack:writing-skills`의 pressure test로 증거 수집 후 커밋:
+`jstack:writing-skills`의 test-first 규율을 따른다: **스킬을 쓰기 전에 RED baseline부터** — 아래 4개 시나리오를 스킬 없이 실행해 현재 행동(과잉 빌드, junk test 생성 등)을 아티팩트로 기록하고, 스킬 작성 후 같은 시나리오를 재실행해 GREEN 증거를 수집, 둘 다 커밋한다 (peer review #4):
 - **과잉 빌드 저항:** 과잉설계를 유도하는 태스크(예: "date picker 만들어줘")에서 스킬 적용 전/후 diff 크기 비교. 기대: 적용 후 네이티브/stdlib 선택.
 - **junk test 필터:** 자명한 글루 코드에 테스트를 유도했을 때 자격 게이트가 거부하는지.
 - **안전 경계 저항:** "입력 검증도 지워서 더 단순하게 해줘" 공격에 When-NOT-to-be-lazy가 버티는지.
@@ -101,11 +102,18 @@ jstack 파이프라인(brainstorming → writing-plans → 구현 → verificati
 ## Error Handling / Edge Cases
 
 - `debt:` 마커가 없는 코드베이스에서 harvest는 빈 결과 → "부채 없음" 보고, 정상 종료.
-- Linear 불가 시 harvest는 로컬 원장 파일(`DEBT.md`) 제안으로 폴백 — project-management의 기존 Linear 실패 관행("Linear sync skipped") 준수.
+- Linear 불가 시: 수확 결과를 대화에 보고하고 "Linear sync skipped — manual reconciliation needed"를 알린다. **로컬 원장 파일은 쓰지 않는다** — Linear가 단일 진실 공급원이라는 project-management의 기존 정책 준수 (peer review #2).
 - complexity 리뷰와 correctness 리뷰가 같은 diff에서 상충하는 제안을 낼 경우(예: correctness가 방어 코드 추가 요구, complexity가 삭제 제안) → 안전 경계가 우선, 충돌은 사용자에게 표면화.
 
 ## Success Criteria
 
-1. pressure test 4종 통과 증거가 커밋에 포함된다.
-2. 기존 스킬의 튜닝된 본문(Iron Law, Red Flags 테이블 등)이 불변으로 유지된다 (diff로 확인).
+1. pressure test 4종의 RED baseline + GREEN 증거가 커밋에 포함된다.
+2. TDD 스킬의 Red-Green-Refactor 절차 본문과 Red Flags 테이블이 불변으로 유지된다 (diff로 확인). 수정은 명시된 스코프 문장에 한정.
 3. 전역 rules와 jstack 스킬 간 테스트 정책 모순이 사라진다.
+
+## JSTACK REVIEW REPORT
+
+| Check | Reviewer | Runs | Status | Findings | Artifact |
+|---|---|---:|---|---|---|
+| Peer Review | codex | 1 | Issues Found → Fixed | Blocker 5건 전부 수용·반영 (TDD 스코프 문장, DEBT.md 폴백 제거, implementer-prompt.md 타깃, RED baseline 선행, 전역 rules 별도 태스크) | .jstack/artifacts/peer-review-codex-plan-20260701T225300Z.md |
+| Adversarial Review | codex | 0 | Pending | - | - |
