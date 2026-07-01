@@ -78,6 +78,20 @@ Task tool (general-purpose):
     - In existing codebases, follow established patterns. Improve code you're touching
       the way a good developer would, but don't restructure things outside your task.
 
+    ## Simplicity
+
+    Stop at the first rung that holds: (1) does this need to exist at all?
+    (2) already in this codebase — reuse it, (3) stdlib, (4) native platform
+    feature, (5) already-installed dependency, (6) one line, (7) only then
+    minimal new code. Understand the full flow first — the ladder shortens
+    the solution, never the reading.
+
+    Mark deliberate shortcuts with a `debt:` comment naming the ceiling and
+    the upgrade path (`# debt: global lock — per-account locks if throughput
+    matters`). Never simplify away input validation at trust boundaries,
+    authorization checks, data-loss error handling, or anything the plan
+    explicitly requires.
+
     ## When You're in Over Your Head
 
     It is always OK to stop and say "this is too hard for me." Bad work is worse than
@@ -110,14 +124,15 @@ Task tool (general-purpose):
     - Is the code clean and maintainable?
 
     **Discipline:**
-    - Did I avoid overbuilding (YAGNI)?
+    - Did I avoid overbuilding (YAGNI)? Did each new piece survive the
+      simplicity ladder (reuse > stdlib > native > existing dep > minimal)?
     - Did I only build what was requested?
     - Did I follow existing patterns in the codebase?
 
     **Testing:**
     - Do tests actually verify behavior (not just mock behavior)?
     - Did I follow TDD if required?
-    - Are tests comprehensive?
+    - Does every gate-qualifying behavior have a test — and trivial glue none?
 
     If you find issues during self-review, fix them now before reporting.
 

@@ -7,7 +7,7 @@ description: Use when you have a written implementation plan to execute in a sep
 
 ## Overview
 
-Load plan, review critically, execute all tasks, report when complete.
+Load plan, review critically, execute all tasks, report when complete. While implementing, apply the jstack:simplest-thing ladder and test qualification gate; mark deliberate shortcuts with `debt:` comments.
 
 **Announce at start:** "I'm using the executing-plans skill to implement this plan."
 
