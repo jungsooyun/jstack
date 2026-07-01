@@ -15,11 +15,16 @@ Write the test first. Watch it fail. Write minimal code to pass.
 
 ## When to Use
 
-**Always:**
+**Always — for logic that passes the test qualification gate in
+jstack:simplest-thing (branches, loops, parsers, money/security boundaries,
+data-loss paths):**
 - New features
 - Bug fixes
 - Refactoring
 - Behavior changes
+
+Logic that fails the gate (trivial one-liners, glue code, pure delegation)
+needs no test. The gate decides with objective criteria, not "feels simple."
 
 **Exceptions (ask your human partner):**
 - Throwaway prototypes
@@ -34,7 +39,11 @@ Thinking "skip TDD just this once"? Stop. That's rationalization.
 NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
 ```
 
-Write code before the test? Delete it. Start over.
+Scope: this law binds all logic that passes the test qualification gate
+(jstack:simplest-thing). Code that does not qualify for a test does not enter
+this cycle — but when a test is warranted, it comes first, always.
+
+Write gate-qualifying code before the test? Delete it. Start over.
 
 **No exceptions:**
 - Don't keep it as "reference"
@@ -215,7 +224,7 @@ Tests-after answer "what does this do?" Tests-first answer "what should this do?
 
 | Excuse | Reality |
 |--------|---------|
-| "Too simple to test" | Simple code breaks. Test takes 30 seconds. |
+| "Too simple to test" | Feelings don't decide — the qualification gate does (branch/loop/parse/money/security). Qualifies? Test it. Doesn't? Skip it deliberately. |
 | "I'll test after" | Tests passing immediately prove nothing. |
 | "Tests after achieve same goals" | Tests-after = "what does this do?" Tests-first = "what should this do?" |
 | "Already manually tested" | Ad-hoc ≠ systematic. No record, can't re-run. |
@@ -286,7 +295,7 @@ Extract validation for multiple fields if needed.
 
 Before marking work complete:
 
-- [ ] Every new function/method has a test
+- [ ] Every gate-qualifying function/method has a test (jstack:simplest-thing gate)
 - [ ] Watched each test fail before implementing
 - [ ] Each test failed for expected reason (feature missing, not typo)
 - [ ] Wrote minimal code to pass each test
