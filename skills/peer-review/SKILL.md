@@ -16,10 +16,15 @@ findings before applying anything.
   conditions, security holes, resource leaks, and silent data corruption.
 - `plan`: review a spec or implementation plan for blocking issues.
 - `consult`: ask a focused question about the repo.
+- `complexity`: over-engineering hunt. Finds what to delete: reinvented
+  standard library, unneeded dependencies, speculative abstractions, dead
+  flexibility. One line per finding: location, what to cut, what replaces it.
 
 Default to `review` when there is a diff. Default to `plan` when the user points at
 a spec or plan. Use `challenge` for money movement, auth, security, exchange
-adapters, state machines, live-smoke paths, and release blockers.
+adapters, state machines, live-smoke paths, and release blockers. Use `complexity`
+when the user asks what can be deleted, simplified, or whether something is
+over-engineered.
 
 ## When to Request
 
@@ -63,6 +68,17 @@ For `challenge`, append:
 Be adversarial. Find how this fails in production. Focus on edge cases, race
 conditions, security holes, replay/idempotency bugs, state drift, resource leaks,
 and silent data corruption. No compliments. Findings first.
+```
+
+For `complexity`, append:
+
+```text
+Hunt over-engineering only. Find what to delete: reinvented standard library,
+unneeded dependencies, speculative abstractions, dead flexibility. One line per
+finding: location, what to cut, what replaces it. Correctness bugs, security
+holes, and performance are explicitly out of scope — route them to review or
+challenge. A single smoke test or assert-based self-check is the lazy minimum,
+not bloat; never flag it for deletion. Findings only, no fixes.
 ```
 
 For `plan`, append:
