@@ -143,6 +143,7 @@ refreshes.
 
 **Engineering discipline**
 - `test-driven-development` - red/green/refactor discipline.
+- `simplest-thing` - simplicity ladder, test qualification gate, and `debt:` markers.
 - `systematic-debugging` - root-cause debugging before fixes.
 - `architecture-deepening` - architecture review vocabulary for deeper modules,
   interface design, seams, adapters, leverage, and locality.
