@@ -7,7 +7,7 @@ description: Use when you have a spec or requirements for a multi-step task, bef
 
 ## Overview
 
-Write implementation plans at the fidelity the work needs. The default is comprehensive: assume a skilled engineer who has zero context for our codebase, toolset, and problem domain, and weak test-design instincts. Document what they need: which files to touch per task, code, testing, docs to check, how to test it. Give them bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+Write implementation plans at the fidelity the work needs. The default is comprehensive: assume a skilled engineer who has zero context for our codebase, toolset, and problem domain, and weak test-design instincts. Document what they need: which files to touch per task, code, testing, docs to check, how to test it. Give them bite-sized tasks. DRY. YAGNI. TDD. Frequent commits. Apply the jstack:simplest-thing ladder when designing tasks — prefer reuse, stdlib, and native features over new code, and plan only tests that pass its qualification gate.
 
 **Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
@@ -99,7 +99,7 @@ Use this structure at the selected fidelity tier. Full-code plans should include
 - Modify: `exact/path/to/existing.py:123-145`
 - Test: `tests/exact/path/to/test.py`
 
-**Test-first:** [name the RED test this slice adds, or "N/A — no behavior change" + reason]
+**Test-first:** [name the RED test this slice adds, or "N/A — no behavior change" or "N/A — fails simplest-thing qualification gate (trivial glue)" + reason]
 **Parallel:** [parallel-safe | sequential: needs Task N]
 
 - [ ] **Step 1: Write the failing test**
