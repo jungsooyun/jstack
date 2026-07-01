@@ -58,7 +58,7 @@ jstack 파이프라인(brainstorming → writing-plans → 구현 → verificati
 단순함이 무지가 아니라 의도로 읽히게 한다. grep 패턴: `(#|//|--) ?debt:`.
 
 **테스트 자격 게이트** — 테스트를 쓰기 전에 통과해야 하는 질문: **깨지면 손실이 나는 로직인가?** (분기, 루프, 파서, 돈/보안 경계, 데이터 손실 경로)
-- 통과 → TDD Iron Law 그대로: RED 먼저, 실패를 눈으로 확인, GREEN.
+- 통과 → TDD 규율이 완전 적용: RED 먼저, 실패를 눈으로 확인, GREEN. (Iron Law는 게이트 통과 로직에 대해 무조건 구속력을 가진다.)
 - 불통과(자명한 one-liner, 글루 코드, 위임뿐인 코드) → 테스트 없이 진행. YAGNI는 테스트에도 적용된다.
 - 커버리지 수치는 목표가 아니다. 게이트를 통과한 테스트가 전부 존재하고 전부 통과하는 것이 목표다.
 - 프레임워크·픽스처·함수별 스위트는 요청 없이 만들지 않는다. 게이트를 통과한 비자명 로직의 최소 단위는 runnable check 1개(assert 기반 self-check 또는 작은 test 파일).
@@ -80,7 +80,7 @@ jstack 파이프라인(brainstorming → writing-plans → 구현 → verificati
 | `skills/subagent-driven-development/implementer-prompt.md` | **실제 행동 파일은 이쪽** — 기존 YAGNI self-review·targeted-tests 지점에 Ladder 요약 3~4줄 + `debt:` 마커 컨벤션 주입 (드리프트 방지의 jstack식 등가물) |
 | `skills/subagent-driven-development/SKILL.md` | simplest-thing 참조 한 줄 |
 | `skills/executing-plans/SKILL.md` | 동일한 짧은 참조 |
-| `skills/test-driven-development/SKILL.md` | RED 앞에 "테스트 자격 게이트" 참조 추가 **+ 스코프 문장 명시 수정**: "every new function/method has a test", "behavior changes always use TDD" 류 문장을 게이트 조건부("게이트를 통과한 로직은 반드시 테스트 먼저")로 교체. **Red-Green-Refactor 절차 본문과 Red Flags 테이블은 불변.** 게이트 없이 참조만 추가하면 양립 불가능한 두 규칙이 공존하게 됨 (peer review #1) |
+| `skills/test-driven-development/SKILL.md` | RED 앞에 "테스트 자격 게이트" 참조 추가 **+ 다음 세 지점을 게이트 조건부로 스코프 수정하는 것을 명시적으로 승인** (peer review #1, 2차): (a) "When to Use"의 Always 목록 — behavior change/refactoring/new feature는 *게이트 통과 시* TDD, (b) Iron Law 문구 — "게이트를 통과한 로직에 대해 NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST", (c) rationalization 테이블의 "Too simple to test" 항목 — 주관적 "너무 단순함" 판단은 여전히 거부하되, 단순 여부는 감이 아니라 게이트의 객관 기준(분기/루프/파서/돈/보안 경계)이 결정한다고 재정의. **Red-Green-Refactor 절차 본문과 나머지 Red Flags/rationalization 항목은 불변.** 게이트 없이 참조만 추가하면 양립 불가능한 두 규칙이 공존하게 됨 |
 | `skills/peer-review/SKILL.md` | `complexity` 모드 추가: 과잉설계만 사냥, 발견당 한 줄 삭제 리스트(`위치: 뭘 지울지 → 뭘로 대체`), 정확성/보안/성능은 명시적 스코프 밖(기존 review 모드 소관). 자격 게이트 최소 테스트(smoke check 1개)는 절대 삭제 플래그 대상 아님 |
 | `skills/project-management/SKILL.md` | debt harvest 터치포인트: `grep -rnE '(#|//|--) ?debt:'` 수확 → capture mode로 Linear 백로그 이슈화 |
 
@@ -115,5 +115,5 @@ jstack 파이프라인(brainstorming → writing-plans → 구현 → verificati
 
 | Check | Reviewer | Runs | Status | Findings | Artifact |
 |---|---|---:|---|---|---|
-| Peer Review | codex | 1 | Issues Found → Fixed | Blocker 5건 전부 수용·반영 (TDD 스코프 문장, DEBT.md 폴백 제거, implementer-prompt.md 타깃, RED baseline 선행, 전역 rules 별도 태스크) | .jstack/artifacts/peer-review-codex-plan-20260701T225300Z.md |
+| Peer Review | codex | 2 | Pass (after fixes) | 1차: blocker 5건 전부 수용·반영. 2차: 4건 해소 확인, TDD 스코프 수정 대상(Always 목록·Iron Law 문구·"Too simple to test" 항목) 명시 열거로 보완 완료 | .jstack/artifacts/peer-review-codex-plan-20260701T225300Z.md |
 | Adversarial Review | codex | 0 | Pending | - | - |
