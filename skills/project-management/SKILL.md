@@ -115,6 +115,24 @@ user confirmation.
 **Do NOT:** use Cycles (Cycles are unused in this workspace — milestones carry
 the goal role); time-box instead of goal-bundle.
 
+### debt-harvest — collect `debt:` markers into the backlog
+
+Trigger: "debt harvest", "what did we defer", "list the shortcuts", or after a
+stretch of simplest-thing work.
+
+1. Grep the repo: `grep -rnE '(#|//|--) ?debt:' . --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude-dir=build`
+2. Each hit is one ledger row: `file:line — ceiling — upgrade path` (parsed
+   from the comment text).
+3. Report the ledger in the conversation. Empty result = "no tracked debt",
+   done.
+4. Offer to file rows the user picks as Backlog issues using capture mode
+   conventions (one issue per row, title = upgrade path, description quotes
+   the marker with file:line).
+
+Read-only until the user picks rows to file. On Linear failure, follow
+Failure Handling below — report in conversation, never write a local ledger
+file.
+
 ## Failure Handling (Linear MCP unavailable)
 
 - **next / groom / plan-milestone:** these are meaningless without Linear. State
