@@ -377,17 +377,17 @@ Replace with:
     - Does every gate-qualifying behavior have a test — and trivial glue none?
 ```
 
-- [ ] **Step 3: One-line reference in `subagent-driven-development/SKILL.md`.** Find the line containing:
+- [ ] **Step 3: One-line reference in `subagent-driven-development/SKILL.md`.** Find the paragraph beginning:
 
 ```markdown
-**Announce at start:**
+**Continuous execution:**
 ```
 
-Insert after that full line (announce line ends at the closing quote):
+Insert BEFORE that paragraph:
 
 ```markdown
-
 **Simplicity:** Implementer prompts embed the jstack:simplest-thing ladder and `debt:` marker convention (see ./implementer-prompt.md § Simplicity). When composing custom slice context, do not strip that section.
+
 ```
 
 - [ ] **Step 4: One-line reference in `executing-plans/SKILL.md`.** Find:
@@ -445,19 +445,7 @@ Replace with:
 **Test-first:** [name the RED test this slice adds, or "N/A — no behavior change" or "N/A — fails simplest-thing qualification gate (trivial glue)" + reason]
 ```
 
-- [ ] **Step 3: Extend the checklist bullet.** Find (verify with `grep -n "DRY, YAGNI" skills/writing-plans/SKILL.md`):
-
-```markdown
-- DRY, YAGNI, TDD, frequent commits
-```
-
-Replace with:
-
-```markdown
-- DRY, YAGNI (simplest-thing ladder), TDD (gate-qualifying tests only), frequent commits
-```
-
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 git add skills/writing-plans/SKILL.md
@@ -593,21 +581,21 @@ git commit -m "feat: add debt-harvest mode to project-management (JEP-296)"
 **Test-first:** N/A — documentation index.
 **Parallel:** parallel-safe with Tasks 3–7; needs Task 2.
 
-- [ ] **Step 1: Add to the numbered pipeline list.** Find the numbered entry for `test-driven-development` (verify with `grep -n "test-driven-development" README.md`). Insert after that entry, renumbering if the list is strictly sequential:
+- [ ] **Step 1: Add to the Engineering discipline bullet list.** README uses flat backtick bullets. Find (under the `**Engineering discipline**` group):
 
 ```markdown
-6. **simplest-thing** - Active during implementation. Forces the simplest solution that works: a reuse-first ladder (exist? > reuse > stdlib > native > existing dep > one line > minimal code), a test qualification gate (only logic that loses something when it breaks gets a test), and `debt:` markers for deliberate shortcuts.
+- `test-driven-development` - red/green/refactor discipline.
 ```
 
-(If the existing list is not strictly sequential or TDD is not item 5, match the local numbering; content of other entries stays untouched.)
-
-- [ ] **Step 2: Add to the flat skill bullet list.** Find the bullet `- **test-driven-development**` in the skills index list and insert after it:
+Insert after it:
 
 ```markdown
-- **simplest-thing** - Simplicity ladder, test qualification gate, `debt:` markers
+- `simplest-thing` - simplicity ladder, test qualification gate, and `debt:` markers.
 ```
 
-- [ ] **Step 3: Commit**
+(That bullet occurs once, in the Engineering discipline group — verify with `grep -n "test-driven-development" README.md` before editing.)
+
+- [ ] **Step 2: Commit**
 
 ```bash
 git add README.md
@@ -724,7 +712,7 @@ Expected: no matches (or only matches in unrelated context, which must be report
 | Check | Reviewer | Runs | Status | Findings | Artifact |
 |---|---|---:|---|---|---|
 | Spec Review | Codex | 2 | Pass (after fixes) | 5 blockers accepted round 1; TDD scope targets enumerated round 2 | .jstack/artifacts/peer-review-codex-plan-20260701T225300Z.md |
-| Plan Review | Codex | 0 | Pending | - | - |
+| Plan Review | Codex | 1 | Pass (after fixes) | 4 findings: #1 rejected with evidence (anchor valid, reviewer misquoted plan); #2–#4 accepted (stale-worktree anchors) and fixed | .jstack/artifacts/peer-review-codex-plan-20260702T001500Z.md |
 | Verification | Pressure tests | 0 | Pending | RED baseline (Task 1) + GREEN (Task 9) | .jstack/artifacts/simplest-thing-verification/ |
 | Live Evidence | N/A | 0 | N/A | Markdown-only change; no runtime | - |
 
