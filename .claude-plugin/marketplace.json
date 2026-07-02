@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "Development marketplace for the local JStack skills library",
-    "version": "5.3.0"
+    "version": "5.4.0"
   },
   "plugins": [
     {
       "name": "jstack",
       "description": "Local skills library for Claude Code and Codex: planning, TDD, peer review, debugging, and delivery workflows",
-      "version": "5.3.0",
+      "version": "5.4.0",
       "source": "./",
       "author": {
         "name": "jerry"
