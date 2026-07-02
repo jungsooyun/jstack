@@ -713,7 +713,8 @@ Expected: no matches (or only matches in unrelated context, which must be report
 |---|---|---:|---|---|---|
 | Spec Review | Codex | 2 | Pass (after fixes) | 5 blockers accepted round 1; TDD scope targets enumerated round 2 | .jstack/artifacts/peer-review-codex-plan-20260701T225300Z.md |
 | Plan Review | Codex | 1 | Pass (after fixes) | 4 findings: #1 rejected with evidence (anchor valid, reviewer misquoted plan); #2–#4 accepted (stale-worktree anchors) and fixed | .jstack/artifacts/peer-review-codex-plan-20260702T001500Z.md |
-| Verification | Pressure tests | 0 | Pending | RED baseline (Task 1) + GREEN (Task 9) | .jstack/artifacts/simplest-thing-verification/ |
+| Verification | Pressure tests | 2 | Pass | RED baseline + GREEN 4/4 PASS (S1 −60% LOC, S2 junk tests 3→0, S3 no regression, S4 stdlib-first + no re-arguing) | .jstack/artifacts/simplest-thing-verification/ |
+| Final Review | Codex | 2 | Pass (after fix) | 1 blocker (GREEN verbatim transcripts missing) → fixed in 592d27e, re-check APPROVED | this table |
 | Live Evidence | N/A | 0 | N/A | Markdown-only change; no runtime | - |
 
 ## Execution Handoff
