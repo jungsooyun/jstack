@@ -19,8 +19,14 @@ next?", "groom the backlog", "plan a milestone") or PM intent is **explicit**
 ("add this to the backlog"). A clear feature request ("build X") is NOT a PM
 task — it goes straight to `jstack:brainstorming`. See the Red Flags table.
 
-All Linear access goes through the Linear MCP tools (`mcp__plugin_linear_linear__*`).
-There is no direct Linear API path.
+There is no direct Linear API path. Two surfaces exist — pick by scope, not preference:
+
+| Scope | Surface |
+|---|---|
+| Workspace-level PM: projects, milestones, grooming queries (`save_project`, `save_milestone`, `list_*`) | Linear MCP (`mcp__plugin_linear_linear__*`) — the only surface with project/milestone mutations |
+| Issue-scoped mutations: create, status, comment, labels, attach link | `orca linear <create\|status set\|comment add\|label add\|attach>` when the Orca app is running — plain Bash, works for every agent in every worktree, no MCP schema load. Linear MCP otherwise |
+
+Worktree ↔ issue linking is Orca metadata, not a Linear field: `orca worktree create/set --linear-issue <ID>` (see jstack:using-git-worktrees).
 
 ## Linear Conventions (the contract)
 
@@ -135,8 +141,13 @@ file.
 
 ## Failure Handling (Linear MCP unavailable)
 
+First try the other surface: if `orca status --json` reports the app running,
+`orca linear list/search/create/status set/comment add` covers **capture**, issue
+queries for **next**, and issue mutations for **groom** (it cannot do
+project/milestone mutations). Only when both surfaces are unavailable:
+
 - **next / groom / plan-milestone:** these are meaningless without Linear. State
-  plainly that they cannot run without the Linear MCP, and **stop** — do not
+  plainly that they cannot run without a Linear surface, and **stop** — do not
   improvise a degraded version from repo artifacts.
 - **capture:** tell the user the idea was **NOT saved anywhere**. Do not silently
   write a local todo file — Linear is the single source of truth, and a silent
@@ -151,7 +162,7 @@ file.
 | Guessing which project an issue belongs to | Ask the user (or `list_projects`); never guess |
 | About to create a project silently | Propose it and wait for explicit confirmation |
 | Recommending next work from git log / plan files | Query Linear — it is the source of truth for priority |
-| Linear MCP is down so I'll write a local todo file | Don't — tell the user the idea was NOT saved |
+| Linear MCP is down so I'll write a local todo file | Don't — try `orca linear create` first; if Orca is also down, tell the user the idea was NOT saved |
 | Bulk-editing the backlog during grooming | Confirm every mutation individually |
 
 ## Integration
@@ -159,5 +170,6 @@ file.
 - **next** hands off to `jstack:brainstorming` with the chosen issue.
 - `jstack:brainstorming` calls **capture** conventions to create the spec's
   linked issue and to capture "later" ideas.
-- `jstack:finishing-a-development-branch` reads the linked issue (via
+- `jstack:finishing-a-development-branch` reads the linked issue (Orca worktree
+  metadata via `orca worktree show`, falling back to
   `scripts/find-linear-issue.sh`) and applies the status transitions.

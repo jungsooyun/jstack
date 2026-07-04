@@ -46,7 +46,11 @@ Stop. Don't proceed to Step 2.
 ```bash
 GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
 GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
+WORKTREE_PATH=$(git rev-parse --show-toplevel)
+orca worktree current --json >/dev/null 2>&1 && ORCA_MANAGED=1
 ```
+
+Capture `WORKTREE_PATH` and `ORCA_MANAGED` **now**, while still inside the worktree — Options 1/4 `cd` to the main root before Step 6 runs, so re-deriving them from CWD there would wrongly report "no worktree".
 
 This determines which menu to show and how cleanup works:
 
@@ -67,7 +71,15 @@ Or ask: "This branch split from main - is that correct?"
 
 ### Step 3.5: Locate Linked Linear Issue
 
-Find the Linear issue linked to this branch's work before touching status:
+Find the Linear issue linked to this branch's work before touching status.
+
+**Orca-managed worktree first:** read the link directly from Orca metadata —
+
+```bash
+orca worktree show --worktree active --json   # → linkedLinearIssue
+```
+
+If `linkedLinearIssue` is set, use it and skip the frontmatter scan. Otherwise:
 
 ```bash
 scripts/find-linear-issue.sh <base-branch>
@@ -83,9 +95,13 @@ YAML frontmatter of each file for a `linear-issue:` value.
 - **Zero or multiple IDs** → ask the user which issue (or none) applies. Never
   guess.
 
-Only apply status transitions (Step 5) when exactly one issue is confirmed. If
-the Linear MCP is unavailable, proceed with the git workflow and announce
-"Linear sync skipped — manual reconciliation needed."
+Only apply status transitions (Step 5) when exactly one issue is confirmed.
+
+**Linear surface for Step 5:** when the Orca app is running, prefer
+`orca linear status set` / `orca linear comment add` (plain Bash, no MCP needed);
+otherwise use the Linear MCP (`save_issue` / `save_comment`). If neither surface
+is available, proceed with the git workflow and announce "Linear sync skipped —
+manual reconciliation needed."
 
 ### Step 4: Present Options
 
@@ -166,6 +182,8 @@ EOF
 ```
 
 **Do NOT clean up worktree** — user needs it alive to iterate on PR feedback.
+If Orca-managed, update the card instead: `orca worktree set --worktree active
+--workspace-status in-review --comment "PR open: <url>"`.
 
 **Linear status:** PR creation is NOT completion. Keep the linked issue **In
 Progress** and add a comment (`save_comment`) with the PR link. The issue moves
@@ -215,13 +233,19 @@ sync skipped — manual reconciliation needed."
 
 **Only runs for Options 1 and 4.** Options 2 and 3 always preserve the worktree.
 
-```bash
-GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
-GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
-WORKTREE_PATH=$(git rev-parse --show-toplevel)
-```
+Use the `GIT_DIR` / `GIT_COMMON` / `WORKTREE_PATH` / `ORCA_MANAGED` values captured in Step 2 — do NOT re-derive them here (Options 1/4 have already `cd`ed to the main root).
 
 **If `GIT_DIR == GIT_COMMON`:** Normal repo, no worktree to clean up. Done.
+
+**If `ORCA_MANAGED` was set in Step 2:** Orca owns the checkout — remove it through Orca, never `git worktree remove`:
+
+```bash
+MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
+cd "$MAIN_ROOT"
+orca worktree rm --worktree path:"$WORKTREE_PATH" --force --json
+```
+
+Done — skip the provenance check below.
 
 **If worktree path is under `.worktrees/`, `worktrees/`, `~/.config/jstack/worktrees/`, or `~/.config/superpowers/worktrees/` (legacy):** jstack created this worktree — we own cleanup.
 
@@ -269,6 +293,10 @@ git worktree prune  # Self-healing: clean up any stale registrations
 - **Problem:** Removing a worktree the harness created causes phantom state
 - **Fix:** Only clean up worktrees under `.worktrees/`, `worktrees/`, `~/.config/jstack/worktrees/`, or `~/.config/superpowers/worktrees/` (legacy)
 
+**Removing an Orca worktree with `git worktree remove`**
+- **Problem:** Orca keeps showing a dead card; terminals and metadata orphaned
+- **Fix:** Orca-managed worktrees are removed with `orca worktree rm` (Step 6)
+
 **No confirmation for discard**
 - **Problem:** Accidentally delete work
 - **Fix:** Require typed "discard" confirmation
@@ -291,7 +319,7 @@ git worktree prune  # Self-healing: clean up any stale registrations
 - Get typed confirmation for Option 4
 - Clean up worktree for Options 1 & 4 only
 - `cd` to main repo root before worktree removal
-- Run `git worktree prune` after removal
+- Run `git worktree prune` after removal (git-fallback worktrees only — Orca worktrees are removed with `orca worktree rm`, no prune)
 
 ## Integration
 

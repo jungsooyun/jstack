@@ -73,6 +73,10 @@ Record the chosen slices in TodoWrite with enough detail to show why each slice 
 
 When consecutive plan tasks are tagged `parallel-safe` and share no files or state, dispatch them concurrently in one batch via jstack:dispatching-parallel-agents — do not run them sequentially.
 
+**Checkout altitude:** all slices in this skill share ONE checkout (the current worktree) — subagents parallelize *within* it. Never create additional worktrees per slice; a slice is a commit unit, not a checkout unit. A separate Orca worktree (jstack:using-git-worktrees Step 1a) is only for a genuinely independent plan/feature that deserves its own card and branch.
+
+**Progress visibility:** if the current checkout is Orca-managed, refresh the card as each slice completes — `orca worktree set --worktree active --comment "slice <n>/<total> done: <slice name>"` — and set `--workspace-status in-review` when entering final review. This is the user's monitoring surface, not a check-in prompt; continuous execution still applies.
+
 ## Review Intensity
 
 Pick the review gate per slice. Do not skip review; choose the right size.

@@ -1,5 +1,20 @@
 # Superpowers Release Notes
 
+## v5.5.0 (2026-07-05)
+
+### Orca Worktree & Linear Integration
+
+The worktree, parallel-execution, and Linear surfaces now integrate with the Orca CLI so isolated work shows up as monitorable board cards and issue mutations no longer depend on the Linear MCP being loaded.
+
+- **using-git-worktrees** — Orca becomes the first-preference worktree mechanism, ahead of harness-native tools and the git fallback. Detect via `orca repo show`, create with `orca worktree create --no-parent [--linear-issue]` (link the Linear issue at create time), keep the board card fresh at checkpoints with `orca worktree set --comment/--workspace-status`, and clean up with `orca worktree rm` — never `git worktree remove` on an Orca-managed checkout.
+- **Checkout altitude rule** — `subagent-driven-development`, `dispatching-parallel-agents`, and `executing-plans` now state the altitude explicitly: subagent slices share ONE checkout (a slice is a commit unit, not a checkout unit) and never get a worktree each; a genuinely independent plan or feature gets its own Orca worktree so it has a monitorable card and branch. All three refresh the Orca card at task/slice checkpoints for user monitoring.
+- **project-management** — Linear surface split by scope, not preference: workspace-level PM (projects, milestones, grooming) stays on the Linear MCP (the only surface with those mutations), while issue-scoped mutations (create/status/comment/label/attach) prefer `orca linear` when the Orca app is running — plain Bash that works for every agent in every worktree with no MCP schema load. `orca linear` is also the first fallback when the MCP is down before declaring an idea unsaved.
+- **finishing-a-development-branch** — reads the linked Linear issue from Orca worktree metadata (`orca worktree show` → `linkedLinearIssue`) before falling back to the frontmatter scan, applies Linear status transitions via `orca linear`, and removes Orca-managed worktrees with `orca worktree rm`.
+
+### Bug Fixes
+
+- **finishing-a-development-branch worktree cleanup** — Option 1 (merge locally) and Option 4 `cd` to the main repo root before Step 6, so Step 6's cleanup re-derived `GIT_DIR`/`GIT_COMMON`/`WORKTREE_PATH` from CWD and always concluded "no worktree to clean up" — the worktree was never removed. Fixed by capturing `WORKTREE_PATH` and `ORCA_MANAGED` in Step 2 while still inside the worktree and reusing those values in Step 6 instead of re-deriving them.
+
 ## v5.0.7 (2026-03-31)
 
 ### GitHub Copilot CLI Support

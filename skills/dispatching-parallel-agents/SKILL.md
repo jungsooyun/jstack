@@ -44,6 +44,8 @@ digraph when_to_use {
 - Need to understand full system state
 - Agents would interfere with each other
 
+**Checkout altitude:** parallel subagents here share the current checkout — right for disjoint files within one feature. If each parallel unit needs its own branch/commits, or units would collide in the working tree, escalate to one Orca worktree per unit instead (jstack:using-git-worktrees Step 1a; `--agent`/`--prompt` for handoff) so each shows up as a monitorable card.
+
 Auto-triggered: when a plan tags tasks `parallel-safe`, subagent-driven-development dispatches them through this skill without a separate decision step.
 
 ## The Pattern

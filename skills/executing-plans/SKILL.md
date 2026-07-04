@@ -28,6 +28,7 @@ For each task:
 2. Follow each step exactly (plan has bite-sized steps)
 3. Run verifications as specified
 4. Mark as completed
+5. If the workspace is Orca-managed, refresh the card: `orca worktree set --worktree active --comment "task <n>/<total> done: <name>"` (set `--workspace-status in-review` when entering Step 3)
 
 ### Step 3: Risk-Based Peer Review Challenge
 

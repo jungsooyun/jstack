@@ -139,7 +139,9 @@ refreshes.
 - `executing-plans` - inline/batch execution for smaller or tightly coupled work.
 - `peer-review` - opposite-agent review, adversarial challenge, artifacts, and triage.
 - `project-management` - Linear-backed PM layer (capture/next/groom/plan-milestone);
-  Linear is the source of truth for backlog, priorities, and goals. Fork-only.
+  Linear is the source of truth for backlog, priorities, and goals. Workspace-level
+  PM (projects/milestones/grooming) runs through the Linear MCP; issue-scoped
+  mutations prefer `orca linear` when the Orca app is running. Fork-only.
 
 **Engineering discipline**
 - `test-driven-development` - red/green/refactor discipline.
@@ -148,8 +150,11 @@ refreshes.
 - `architecture-deepening` - architecture review vocabulary for deeper modules,
   interface design, seams, adapters, leverage, and locality.
 - `verification-before-completion` - evidence before completion claims.
-- `using-git-worktrees` - isolated workspaces.
-- `finishing-a-development-branch` - final branch/PR/merge/cleanup choices.
+- `using-git-worktrees` - isolated workspaces, Orca-first when it manages the repo
+  (monitorable board card per worktree) then native tools, then a git fallback.
+- `finishing-a-development-branch` - final branch/PR/merge/cleanup choices; reads the
+  linked Linear issue from Orca worktree metadata and removes Orca worktrees via
+  `orca worktree rm`.
 
 **Review handling**
 - `requesting-code-review`

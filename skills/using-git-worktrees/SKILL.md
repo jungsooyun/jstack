@@ -1,15 +1,15 @@
 ---
 name: using-git-worktrees
-description: Use when starting feature work that needs isolation from current workspace or before executing implementation plans - ensures an isolated workspace exists via native tools or git worktree fallback
+description: Use when starting feature work that needs isolation from current workspace or before executing implementation plans - ensures an isolated workspace exists via Orca, native tools, or git worktree fallback
 ---
 
 # Using Git Worktrees
 
 ## Overview
 
-Ensure work happens in an isolated workspace. Prefer your platform's native worktree tools. Fall back to manual git worktrees only when no native tool is available.
+Ensure work happens in an isolated workspace. Prefer Orca when it manages the repo, then your platform's native worktree tools. Fall back to manual git worktrees only when neither is available.
 
-**Core principle:** Detect existing isolation first. Then use native tools. Then fall back to git. Never fight the harness.
+**Core principle:** Detect existing isolation first. Then Orca. Then native tools. Then git fallback. Never fight the managing layer.
 
 **Announce at start:** "I'm using the using-git-worktrees skill to set up an isolated workspace."
 
@@ -36,6 +36,8 @@ Report with branch state:
 - On a branch: "Already in isolated workspace at `<path>` on branch `<name>`."
 - Detached HEAD: "Already in isolated workspace at `<path>` (detached HEAD, externally managed). Branch creation needed at finish time."
 
+If the worktree is Orca-managed (`orca worktree current --json` succeeds), keep its board card fresh while working: `orca worktree set --worktree active --comment "<short status>"` at meaningful checkpoints (repro, implemented, verified, blocked).
+
 **If `GIT_DIR == GIT_COMMON` (or in a submodule):** You are in a normal repo checkout.
 
 Has the user already indicated their worktree preference in your instructions? If not, ask for consent before creating a worktree:
@@ -46,15 +48,40 @@ Honor any existing declared preference without asking. If the user declines cons
 
 ## Step 1: Create Isolated Workspace
 
-**You have two mechanisms. Try them in this order.**
+**Try the mechanisms below in this order.**
 
 ### 1a. Native Worktree Tools (preferred)
 
-The user has asked for an isolated workspace (Step 0 consent). Do you already have a way to create a worktree? It might be a tool with a name like `EnterWorktree`, `WorktreeCreate`, a `/worktree` command, or a `--worktree` flag. If you do, use it and skip to Step 3.
+The user has asked for an isolated workspace (Step 0 consent).
 
-Native tools handle directory placement, branch creation, and cleanup automatically. Using `git worktree add` when you have a native tool creates phantom state your harness can't see or manage.
+**Orca first.** If the Orca app manages this repo — check with:
 
-Only proceed to Step 1b if you have no native worktree tool available.
+```bash
+orca repo show --repo path:"$(git rev-parse --show-toplevel)" --json
+```
+
+— create the worktree through Orca so the work appears as a monitorable card on the Orca board:
+
+```bash
+orca worktree create --name <task-name> --no-parent [--linear-issue JEP-123] --json
+cd <path from output>
+```
+
+Rules:
+- Independent work: `--no-parent`, omit `--base-branch` (repo default base). Stacked work only: `--parent-worktree active`.
+- Link the Linear issue at create time when known (`--linear-issue <ID|url>`) — finishing skills read it back via `orca worktree show`.
+- If the repo's setup hook is heavy and the task doesn't need it, pass `--setup skip` (check repo CLAUDE.md for per-repo worktree setup notes).
+- Handing the work to another agent instead of doing it yourself: add `--agent <claude|codex> --prompt "<task brief>"` and stop after creation.
+- While working, update the card at meaningful checkpoints: `orca worktree set --worktree active --comment "<short status>" --workspace-status <todo|in-progress|in-review|completed>`.
+- Cleanup at finish time is `orca worktree rm` (jstack:finishing-a-development-branch handles it) — never manual `git worktree remove`.
+
+Then skip to Step 3.
+
+**Other native tools.** No Orca? Do you have a harness worktree tool — a name like `EnterWorktree`, `WorktreeCreate`, a `/worktree` command, or a `--worktree` flag? Use it and skip to Step 3.
+
+Native tools handle directory placement, branch creation, and cleanup automatically. Using `git worktree add` when you have a native tool — or a harness tool when Orca manages the repo — creates phantom state the managing layer can't see.
+
+Only proceed to Step 1b if none of the above applies.
 
 ### 1b. Git Worktree Fallback
 
@@ -159,8 +186,9 @@ Ready to implement <feature-name>
 |-----------|--------|
 | Already in linked worktree | Skip creation (Step 0) |
 | In a submodule | Treat as normal repo (Step 0 guard) |
+| Orca manages this repo | `orca worktree create` (Step 1a) |
 | Native worktree tool available | Use it (Step 1a) |
-| No native tool | Git worktree fallback (Step 1b) |
+| No Orca, no native tool | Git worktree fallback (Step 1b) |
 | `.worktrees/` exists | Use it (verify ignored) |
 | `worktrees/` exists | Use it (verify ignored) |
 | Both exist | Use `.worktrees/` |
@@ -202,6 +230,7 @@ Ready to implement <feature-name>
 
 **Never:**
 - Create a worktree when Step 0 detects existing isolation
+- Use `git worktree add` or a harness tool (e.g., `EnterWorktree`) in an Orca-managed repo — Orca can't see that checkout; use `orca worktree create`
 - Use `git worktree add` when you have a native worktree tool (e.g., `EnterWorktree`). This is the #1 mistake — if you have it, use it.
 - Skip Step 1a by jumping straight to Step 1b's git commands
 - Create worktree without verifying it's ignored (project-local)
