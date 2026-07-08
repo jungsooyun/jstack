@@ -62,6 +62,21 @@ the repository code, spec, plan, tests, docs, and runtime evidence relevant to
 this review. Do not edit files. Do not spawn subagents.
 ```
 
+For `review`, `challenge`, `complexity`, and `plan` (any finding-producing mode),
+also append this output contract:
+
+```text
+Output contract — deliver value even if the caller interrupts early:
+1. Your FIRST line is a one-line verdict: PASS, ISSUES FOUND, or BLOCKING. Emit
+   it before any tracing or context-gathering, then refine as you go.
+2. Then a severity-ranked list (BLOCKING > HIGH > MEDIUM > LOW), most severe
+   first. Each item: file:line, one-sentence failure scenario, no fix code.
+3. Findings before prose. No preamble, no compliments, no restating the diff.
+4. Stay inside the named scope. If judging correctness truly requires a file
+   outside it, name the file and a one-line reason, then continue — never expand
+   scope silently.
+```
+
 For `challenge`, append:
 
 ```text
@@ -156,6 +171,33 @@ Use a 30 minute timeout around outside reviewer commands when the host supports 
 If auth fails, stop and report the exact login command (`codex login` or Claude Code
 login) instead of falling back to self-review. If the command hangs, report the
 timeout and save any partial stderr/stdout in the artifact.
+
+### Long reviews on hosts that cap a single call (background + poll)
+
+Some hosts cap one shell/tool call well below a full review (Codex's shell tool
+does this). A prose "30 minute timeout" cannot lift that cap — the host kills the
+call regardless, so a slow reviewer returns nothing. When the reviewer command may
+exceed the host's per-call limit, detach it and poll a result file instead of
+blocking on one long call. Each poll is a fast, separate call, so none hits the cap:
+
+```bash
+STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+OUT=".jstack/artifacts/peer-review-claude-review-$STAMP.out"
+mkdir -p .jstack/artifacts
+nohup claude -p --model claude-opus-4-8 --permission-mode plan \
+  --allowedTools "Read,Grep,Glob,LS" --add-dir "$REPO_ROOT" \
+  -- "<boundary plus review prompt>" </dev/null >"$OUT" 2>&1 &
+echo "$!" > "$OUT.pid"
+```
+
+Then poll until the process exits, and read `$OUT`:
+
+```bash
+kill -0 "$(cat "$OUT.pid")" 2>/dev/null && echo RUNNING || echo DONE
+```
+
+Save `$OUT` as the artifact regardless of outcome. If it is still RUNNING when you
+must stop, report that and hand off the pid/out path rather than discarding it.
 
 ## Artifacts
 
