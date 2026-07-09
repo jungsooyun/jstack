@@ -195,11 +195,9 @@ spec before execution handoff.
 - When Codex calls Claude for peer review, pin Claude to
   `--model claude-opus-4-8` rather than the floating `opus` alias.
 - If Claude Code calls Codex for peer review, default the Codex reviewer to
-  `-m gpt-5.5`. If the user asks for a fast Codex review lane, also add
-  `-c 'service_tier="fast"'`. For lightweight planning/review tasks, pair it
-  with `-c 'model_reasoning_effort="low"'`; keep higher reasoning for
-  adversarial, security, live-risk, or release-blocking review unless the user
-  explicitly prioritizes speed over depth.
+  `-m gpt-5.6-sol -c 'model_reasoning_effort="high"'`. If the user explicitly asks
+  for a fast Codex review lane, also add `-c 'service_tier="fast"'` and swap the
+  reasoning effort to `low`.
 - For implementation handoff, specify that implementer agents should stay on a
   `gpt-5.4`-class lane with `medium` or `low` reasoning, regardless of whether
   the implementer runs in Codex or Claude Code. In concrete terms, prefer

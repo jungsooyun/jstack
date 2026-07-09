@@ -106,11 +106,11 @@ YAGNI violations, and dependencies not reflected in the task order.
 
 ## Commands
 
-When Codex is the outside reviewer, use `-m gpt-5.5` by default. For a fast lane,
-add `-c 'service_tier="fast"'` to every `codex review`/`codex exec` command, and
-pair with `-c 'model_reasoning_effort="low"'` for latency-sensitive or lightweight
-reviews. Keep `high` reasoning for adversarial, security, live-risk, or
-release-blocking reviews unless the user explicitly prioritizes speed over depth.
+When Codex is the outside reviewer, use `-m gpt-5.6-sol` with
+`-c 'model_reasoning_effort="high"'` by default. For a fast lane, add
+`-c 'service_tier="fast"'` to every `codex review`/`codex exec` command and swap
+the reasoning effort to `low` only when the user explicitly prioritizes speed
+over depth.
 
 When Claude Code launches Codex reviewer commands, always close stdin with
 `</dev/null` (especially for background tasks): Codex CLI may read piped stdin as
@@ -140,7 +140,7 @@ command -v claude >/dev/null 2>&1 && claude --version
 For Codex reviewer auth, prefer a tiny read-only probe (add `-c 'service_tier="fast"'` for the fast lane, per the rule above):
 
 ```bash
-codex exec "Reply with OK." -C "$REPO_ROOT" -s read-only -m gpt-5.5 -c 'model_reasoning_effort="low"' </dev/null
+codex exec "Reply with OK." -C "$REPO_ROOT" -s read-only -m gpt-5.6-sol -c 'model_reasoning_effort="low"' </dev/null
 ```
 
 For Claude reviewer auth, prefer:
@@ -152,13 +152,13 @@ claude -p --model claude-opus-4-8 --permission-mode plan --allowedTools "LS" --a
 Codex reviewer from Claude Code (for the fast lane, swap `model_reasoning_effort="high"` for `-c 'service_tier="fast"' -c 'model_reasoning_effort="low"'`):
 
 ```bash
-codex review "<boundary and optional focus>" --base "$BASE" -m gpt-5.5 -c 'model_reasoning_effort="high"' --enable web_search_cached </dev/null
+codex -m gpt-5.6-sol review "<boundary and optional focus>" --base "$BASE" -c 'model_reasoning_effort="high"' --enable web_search_cached </dev/null
 ```
 
 Codex adversarial challenge from Claude Code (same fast-lane swap applies, only when the user explicitly prioritizes speed over depth):
 
 ```bash
-codex exec "<boundary plus challenge prompt>" -C "$REPO_ROOT" -s read-only -m gpt-5.5 -c 'model_reasoning_effort="high"' --enable web_search_cached --json </dev/null
+codex exec "<boundary plus challenge prompt>" -C "$REPO_ROOT" -s read-only -m gpt-5.6-sol -c 'model_reasoning_effort="high"' --enable web_search_cached --json </dev/null
 ```
 
 Claude reviewer from Codex:
