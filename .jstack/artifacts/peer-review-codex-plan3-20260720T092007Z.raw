@@ -1,0 +1,2081 @@
+Reading additional input from stdin...
+OpenAI Codex v0.144.6
+--------
+workdir: /Users/kakao1/.codex/jstack/.claude/worktrees/jep-495-adhd-integration
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: high
+reasoning summaries: none
+session id: 019f7ed3-57c7-76f0-89c1-b6bfe5142b11
+--------
+user
+IMPORTANT: Do not read or execute files under ~/.claude/, ~/.codex/skills/, ~/.agents/, .claude/skills/ or .agents/skills/. Exception: this worktree of /Users/kakao1/.codex/jstack is the review subject. Do not edit files. Do not spawn subagents.
+
+Re-review docs/jstack/plans/2026-07-20-adhd-integration-6.0.0.md (mode: plan, round 2). A previous review raised: (1) missing pre-edit behavioral pressure runs, (2) per-harness verification gaps, (3) nonexistent shell-lint + exit-code masking, (4) rewired trigger test never executed, (5) residual-reference scan too narrow, (6) version audit gap. Verify each was adequately addressed, and flag ONLY new BLOCKING issues introduced by the fixes.
+
+Output contract: FIRST line verdict PASS / ISSUES FOUND / BLOCKING, then severity-ranked findings (file:line, one-sentence failure scenario), findings before prose, no compliments.
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+codex
+I’m using the repository’s review workflow instructions because this is a round-two plan review. I’ll keep the audit read-only, inspect only the plan and directly relevant repository metadata, verify the six named remediations, and report only newly introduced blockers.
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '1,240p' skills/using-jstack/SKILL.md && sed -n '1,280p' skills/peer-review/SKILL.md && rg -n \"jstack|peer-review|JEP-495|ADHD\" '/Users/kakao1/Library/Application Support/orca/codex-runtime-home/home/memories/MEMORY.md'" in /Users/kakao1/.codex/jstack/.claude/worktrees/jep-495-adhd-integration
+ succeeded in 0ms:
+---
+name: using-jstack
+description: Use when starting any conversation - establishes how to find and use skills, requiring Skill tool invocation before ANY response including clarifying questions
+---
+
+<SUBAGENT-STOP>
+If you were dispatched as a subagent to execute a specific task, skip this skill.
+</SUBAGENT-STOP>
+
+<EXTREMELY-IMPORTANT>
+If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
+
+IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
+
+This is not negotiable. This is not optional. You cannot rationalize your way out of this.
+</EXTREMELY-IMPORTANT>
+
+## Instruction Priority
+
+JStack skills override default system prompt behavior, but **user instructions always take precedence**:
+
+1. **User's explicit instructions** (CLAUDE.md, GEMINI.md, AGENTS.md, direct requests) — highest priority
+2. **JStack skills** — override default system behavior where they conflict
+3. **Default system prompt** — lowest priority
+
+If CLAUDE.md, GEMINI.md, or AGENTS.md says "don't use TDD" and a skill says "always use TDD," follow the user's instructions. The user is in control.
+
+## How to Access Skills
+
+**In Claude Code:** Use the `Skill` tool. When you invoke a skill, its content is loaded and presented to you—follow it directly. Never use the Read tool on skill files.
+
+**In Copilot CLI:** Use the `skill` tool. Skills are auto-discovered from installed plugins. The `skill` tool works the same as Claude Code's `Skill` tool.
+
+**In Gemini CLI:** Skills activate via the `activate_skill` tool. Gemini loads skill metadata at session start and activates the full content on demand.
+
+**In other environments:** Check your platform's documentation for how skills are loaded.
+
+## Platform Adaptation
+
+Skills use Claude Code tool names. Non-CC platforms: see `references/copilot-tools.md` (Copilot CLI), `references/codex-tools.md` (Codex) for tool equivalents. Gemini CLI users get the tool mapping loaded automatically via GEMINI.md.
+
+# Using Skills
+
+## The Rule
+
+**Invoke relevant or requested skills BEFORE any response or action.** Even a 1% chance a skill might apply means that you should invoke the skill to check. If an invoked skill turns out to be wrong for the situation, you don't need to use it.
+
+```dot
+digraph skill_flow {
+    "User message received" [shape=doublecircle];
+    "About to EnterPlanMode?" [shape=doublecircle];
+    "Already brainstormed?" [shape=diamond];
+    "Invoke brainstorming skill" [shape=box];
+    "Might any skill apply?" [shape=diamond];
+    "Invoke Skill tool" [shape=box];
+    "Announce: 'Using [skill] to [purpose]'" [shape=box];
+    "Has checklist?" [shape=diamond];
+    "Create TodoWrite todo per item" [shape=box];
+    "Follow skill exactly" [shape=box];
+    "Respond (including clarifications)" [shape=doublecircle];
+
+    "About to EnterPlanMode?" -> "Already brainstormed?";
+    "Already brainstormed?" -> "Invoke brainstorming skill" [label="no"];
+    "Already brainstormed?" -> "Might any skill apply?" [label="yes"];
+    "Invoke brainstorming skill" -> "Might any skill apply?";
+
+    "User message received" -> "Might any skill apply?";
+    "Might any skill apply?" -> "Invoke Skill tool" [label="yes, even 1%"];
+    "Might any skill apply?" -> "Respond (including clarifications)" [label="definitely not"];
+    "Invoke Skill tool" -> "Announce: 'Using [skill] to [purpose]'";
+    "Announce: 'Using [skill] to [purpose]'" -> "Has checklist?";
+    "Has checklist?" -> "Create TodoWrite todo per item" [label="yes"];
+    "Has checklist?" -> "Follow skill exactly" [label="no"];
+    "Create TodoWrite todo per item" -> "Follow skill exactly";
+}
+```
+
+## Red Flags
+
+These thoughts mean STOP—you're rationalizing:
+
+| Thought | Reality |
+|---------|---------|
+| "This is just a simple question" | Questions are tasks. Check for skills. |
+| "I need more context first" | Skill check comes BEFORE clarifying questions. |
+| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first. |
+| "I can check git/files quickly" | Files lack conversation context. Check for skills. |
+| "Let me gather information first" | Skills tell you HOW to gather information. |
+| "This doesn't need a formal skill" | If a skill exists, use it. |
+| "I remember this skill" | Skills evolve. Read current version. |
+| "This doesn't count as a task" | Action = task. Check for skills. |
+| "The skill is overkill" | Simple things become complex. Use it. |
+| "I'll just do this one thing first" | Check BEFORE doing anything. |
+| "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
+| "I know what that means" | Knowing the concept ≠ using the skill. Invoke it. |
+
+## Skill Priority
+
+When multiple skills could apply, use this order:
+
+1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach the task
+2. **Implementation skills second** (frontend-design, mcp-builder) - these guide execution
+
+"Let's build X" → brainstorming first, then implementation skills.
+"Fix this bug" → debugging first, then domain-specific skills.
+
+## Skill Types
+
+**Rigid** (TDD, debugging): Follow exactly. Don't adapt away discipline.
+
+**Flexible** (patterns): Adapt principles to context.
+
+The skill itself tells you which.
+
+## User Instructions
+
+Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows.
+---
+name: peer-review
+description: Use when an independent outside review is needed for a diff, plan, spec, security-sensitive change, live-risk workflow, or adversarial challenge.
+---
+
+# Peer Review
+
+Get the opposite primary agent to review the work. In Codex, ask Claude. In Claude
+Code, ask Codex. The reviewer is read-only and advisory. The active agent evaluates
+findings before applying anything.
+
+## Modes
+
+- `review`: review the current diff against the base branch.
+- `challenge`: adversarial review. Look for production failure modes, race
+  conditions, security holes, resource leaks, and silent data corruption.
+- `plan`: review a spec or implementation plan for blocking issues.
+- `consult`: ask a focused question about the repo.
+- `complexity`: over-engineering hunt. Finds what to delete: reinvented
+  standard library, unneeded dependencies, speculative abstractions, dead
+  flexibility. One line per finding: location, what to cut, what replaces it.
+
+Default to `review` when there is a diff. Default to `plan` when the user points at
+a spec or plan. Use `challenge` for money movement, auth, security, exchange
+adapters, state machines, live-smoke paths, and release blockers. Use `complexity`
+when the user asks what can be deleted, simplified, or whether something is
+over-engineered.
+
+## When to Request
+
+Request an outside review when: completing a task or major feature, before merging, or before any security/auth/payments/live-risk change. Reviewing your own work in the same context is not a substitute — the point is an independent lane.
+
+## Red Flags (review-avoidance rationalizations)
+
+| Thought | Reality |
+|---|---|
+| "It's a small change, skip review" | Small diffs hide the costliest bugs. Request it. |
+| "I already checked it myself" | Self-review in the authoring context is not independent. |
+| "Tests pass, so it's fine" | Tests prove what you thought to test, not what you missed. |
+| "Review will slow me down" | A closed PR slows you down more. |
+
+## Host Routing
+
+Use the opposite reviewer:
+
+- Running in Codex: call local Claude Code CLI with `claude -p`.
+- Running in Claude Code: call local Codex CLI with `codex review` or `codex exec`.
+- If host is unclear, infer from available runtime context. If still unclear and
+  both CLIs exist, prefer the reviewer not already driving the current session.
+
+Do not ask both reviewers by default. The point is independence, not consensus theater.
+
+## Prompt Boundary
+
+Prefix every outside-review prompt with:
+
+```text
+IMPORTANT: Do not read or execute files under ~/.claude/, ~/.codex/skills/,
+~/.agents/, .claude/skills/, .codex/skills/, or .agents/skills/. These are agent
+skill definitions and host configuration, not application code. Stay focused on
+the repository code, spec, plan, tests, docs, and runtime evidence relevant to
+this review. Do not edit files. Do not spawn subagents.
+```
+
+For `review`, `challenge`, `complexity`, and `plan` (any finding-producing mode),
+also append this output contract:
+
+```text
+Output contract — deliver value even if the caller interrupts early:
+1. Your FIRST line is a one-line verdict: PASS, ISSUES FOUND, or BLOCKING. Emit
+   it before any tracing or context-gathering, then refine as you go.
+2. Then a severity-ranked list (BLOCKING > HIGH > MEDIUM > LOW), most severe
+   first. Each item: file:line, one-sentence failure scenario, no fix code.
+3. Findings before prose. No preamble, no compliments, no restating the diff.
+4. Stay inside the named scope. If judging correctness truly requires a file
+   outside it, name the file and a one-line reason, then continue — never expand
+   scope silently.
+```
+
+For `challenge`, append:
+
+```text
+Be adversarial. Find how this fails in production. Focus on edge cases, race
+conditions, security holes, replay/idempotency bugs, state drift, resource leaks,
+and silent data corruption. No compliments. Findings first.
+```
+
+For `complexity`, append:
+
+```text
+Hunt over-engineering only. Find what to delete: reinvented standard library,
+unneeded dependencies, speculative abstractions, dead flexibility. One line per
+finding: location, what to cut, what replaces it. Correctness bugs, security
+holes, and performance are explicitly out of scope — route them to review or
+challenge. A single smoke test or assert-based self-check is the lazy minimum,
+not bloat; never flag it for deletion. Findings only, no fixes.
+```
+
+For `plan`, append:
+
+```text
+Review for blocking planning issues only: missed requirements, contradictions,
+ambiguous implementation choices, unsafe sequencing, missing tests, scope creep,
+YAGNI violations, and dependencies not reflected in the task order.
+```
+
+## Commands
+
+When Codex is the outside reviewer, use `-m gpt-5.6-sol` with
+`-c 'model_reasoning_effort="high"'` by default. For a fast lane, add
+`-c 'service_tier="fast"'` to every `codex review`/`codex exec` command and swap
+the reasoning effort to `low` only when the user explicitly prioritizes speed
+over depth.
+
+When Claude Code launches Codex reviewer commands, always close stdin with
+`</dev/null` (especially for background tasks): Codex CLI may read piped stdin as
+an extra `<stdin>` block even with a prompt argument, leaving the wrapper stuck
+after `Reading additional input from stdin...`.
+
+When Codex launches Claude reviewer commands, terminate variadic options before
+the prompt and close inherited stdin. Claude's `--add-dir <directories...>`
+consumes following positional args until `--`, so the prompt may be parsed as a
+directory. Shell: put `--` before the prompt and add `</dev/null`. Python
+wrappers: pass the prompt after `--` and use `stdin=subprocess.DEVNULL`.
+
+Detect the repo and base branch:
+
+```bash
+REPO_ROOT=$(git rev-parse --show-toplevel)
+BASE=$(gh pr view --json baseRefName -q .baseRefName 2>/dev/null || git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||' || echo main)
+```
+
+Preflight the opposite reviewer before building expensive prompts:
+
+```bash
+command -v codex >/dev/null 2>&1 && codex --version
+command -v claude >/dev/null 2>&1 && claude --version
+```
+
+For Codex reviewer auth, prefer a tiny read-only probe (add `-c 'service_tier="fast"'` for the fast lane, per the rule above):
+
+```bash
+codex exec "Reply with OK." -C "$REPO_ROOT" -s read-only -m gpt-5.6-sol -c 'model_reasoning_effort="low"' </dev/null
+```
+
+For Claude reviewer auth, prefer:
+
+```bash
+claude -p --model claude-opus-4-8 --permission-mode plan --allowedTools "LS" --add-dir "$REPO_ROOT" -- "Reply with OK." </dev/null
+```
+
+Codex reviewer from Claude Code (for the fast lane, swap `model_reasoning_effort="high"` for `-c 'service_tier="fast"' -c 'model_reasoning_effort="low"'`):
+
+```bash
+codex -m gpt-5.6-sol review "<boundary and optional focus>" --base "$BASE" -c 'model_reasoning_effort="high"' --enable web_search_cached </dev/null
+```
+
+Codex adversarial challenge from Claude Code (same fast-lane swap applies, only when the user explicitly prioritizes speed over depth):
+
+```bash
+codex exec "<boundary plus challenge prompt>" -C "$REPO_ROOT" -s read-only -m gpt-5.6-sol -c 'model_reasoning_effort="high"' --enable web_search_cached --json </dev/null
+```
+
+Claude reviewer from Codex:
+
+```bash
+claude -p --model claude-opus-4-8 --permission-mode plan --allowedTools "Read,Grep,Glob,LS" --add-dir "$REPO_ROOT" -- "<boundary plus review prompt>" </dev/null
+```
+
+Use a 30 minute timeout around outside reviewer commands when the host supports it.
+If auth fails, stop and report the exact login command (`codex login` or Claude Code
+login) instead of falling back to self-review. If the command hangs, report the
+timeout and save any partial stderr/stdout in the artifact.
+
+### Long reviews on hosts that cap a single call (background + poll)
+
+Some hosts cap one shell/tool call well below a full review (Codex's shell tool
+does this). A prose "30 minute timeout" cannot lift that cap — the host kills the
+call regardless, so a slow reviewer returns nothing. When the reviewer command may
+exceed the host's per-call limit, detach it and poll a result file instead of
+blocking on one long call. Each poll is a fast, separate call, so none hits the cap:
+
+```bash
+STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+OUT=".jstack/artifacts/peer-review-claude-review-$STAMP.out"
+mkdir -p .jstack/artifacts
+nohup claude -p --model claude-opus-4-8 --permission-mode plan \
+  --allowedTools "Read,Grep,Glob,LS" --add-dir "$REPO_ROOT" \
+  -- "<boundary plus review prompt>" </dev/null >"$OUT" 2>&1 &
+echo "$!" > "$OUT.pid"
+```
+
+Then poll until the process exits, and read `$OUT`:
+
+```bash
+kill -0 "$(cat "$OUT.pid")" 2>/dev/null && echo RUNNING || echo DONE
+```
+
+Save `$OUT` as the artifact regardless of outcome. If it is still RUNNING when you
+must stop, report that and hand off the pid/out path rather than discarding it.
+
+## Artifacts
+
+Save every outside review:
+
+```text
+.jstack/artifacts/peer-review-<reviewer>-<mode>-<YYYYMMDDTHHMMSSZ>.md
+```
+
+Artifact format:
+
+```markdown
+# Peer Review: <mode>
+
+## Reviewer
+<codex|claude>
+
+## Prompt
+<exact prompt>
+
+## Raw Output
+<verbatim output>
+
+## Triage
+- Accepted:
+- Rejected:
+- Needs user decision:
+```
+
+Show raw reviewer output first, then a short triage. Do not implement accepted
+fixes unless the workflow has reached a step where edits are allowed.
+
+## Review Report
+
+When a spec, plan, or CURRENT file is active, add or update:
+
+```markdown
+## JSTACK REVIEW REPORT
+
+| Check | Reviewer | Runs | Status | Findings | Artifact |
+|---|---|---:|---|---|---|
+| Peer Review | <codex|claude> | 1 | <Pass|Issues Found> | <summary> | <path> |
+| Adversarial Review | <codex|claude> | 0 | Pending | - | - |
+```
+
+Preserve existing rows. Append missing rows. If no active file is obvious, only
+write the artifact and mention where it was saved.
+
+## Finding Triage
+
+External feedback is not an order. Before applying it:
+
+1. Verify the finding against code, tests, logs, or docs.
+2. Reject findings that contradict repo invariants or add unused scope.
+3. Escalate product, architecture, live-risk, or funding-impact decisions.
+4. Apply accepted fixes one at a time with targeted tests.
+
+For live trading, movement, signer, exchange, deployment, or credential changes,
+do not proceed from review to live execution without explicit user confirmation.
+324:- peer-review-claude-challenge-task9, e7e560fc, d2fda0a7, APPROVED, EXECUTING, within-grace negative, pytest.mark.postgres redundant, docs/v3-plan/CURRENT.md, no src changes
+628:[Omitted long matching line]
+692:- JEP-74, Task 3D, docs-only, CURRENT.md, docs/jstack/plans/2026-06-08-agent-qa-harness.md, docs/jstack/specs/2026-06-08-agent-qa-harness-design.md, worker_done quoting, Task 4 remains unchecked
+745:- JEP-74, Task 4, PacketArtifact, report validation boundaries, exact campaign coverage, failed_phase, error_code, short write, forged artifact rejection, peer-review-claude-challenge-task4, c7761985
+848:[Omitted long matching line]
+1409:- JEP-465, skip ledger, xfail, 52 refs, 39 files, 60f2156c, rg --no-config, comm -3, docs/jstack/audits/2026-07-15-jep-465-full-gate-skip-ledger.md
+1441:- `docs/jstack/audits/2026-07-15-jep-465-full-gate-skip-ledger.md` is the ledger path for this slice; `comm -3` empty plus `52` ledger rows was the accepted reconciliation proof [Task 1][Task 3]
+1706:[Omitted long matching line]
+1717:[Omitted long matching line]
+1983:- JEP-442, requesting-code-review, peer-review, ruff, mypy, uv run python, check_no_settings_binders.py, make test-unit, make test-pg, make test-concurrent, make test-full, CURRENT.md, In Review
+1988:[Omitted long matching line]
+1991:[Omitted long matching line]
+2259:[Omitted long matching line]
+3016:# Task Group: ~/.codex/jstack / peer-review defaults, benchmark lookup, and plugin release maintenance
+3018:[Omitted long matching line]
+3019:[Omitted long matching line]
+3021:## Task 1: Updated peer-review defaults from `gpt-5.5` to explicit `gpt-5.6-sol` high
+3025:[Omitted long matching line]
+3029:- jstack, peer-review, gpt-5.6-sol, gpt-5.6, sol, terra, luna, codex -m review, skills/peer-review/SKILL.md, skills/writing-plans/SKILL.md, tests/jstack-static/run.sh
+3035:[Omitted long matching line]
+3041:## Task 3: Bumped jstack manifests, refreshed the Claude directory marketplace install, and committed the release
+3045:[Omitted long matching line]
+3049:- scripts/bump-version.sh, claude plugin marketplace update jstack-dev, claude plugin update jstack@jstack-dev --scope user, 5.5.1, 1411e46, plugin validate, package.json, .claude-plugin/plugin.json
+3060:[Omitted long matching line]
+3064:[Omitted long matching line]
+3209:[Omitted long matching line]
+3236:[Omitted long matching line]
+3240:- JEP-406, peer review, .jstack/artifacts/peer-review-claude-challenge-20260708T101056Z.md, git diff --check master...HEAD, _submitted_maker_cloids, Orca comment, Linear update, da6af30f5
+3246:[Omitted long matching line]
+3262:[Omitted long matching line]
+3270:[Omitted long matching line]
+3665:[Omitted long matching line]
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc 'git status --short && git log --oneline --decorate -8 -- docs/jstack/plans/2026-07-20-adhd-integration-6.0.0.md && git diff -- docs/jstack/plans/2026-07-20-adhd-integration-6.0.0.md && nl -ba docs/jstack/plans/2026-07-20-adhd-integration-6.0.0.md' in /Users/kakao1/.codex/jstack/.claude/worktrees/jep-495-adhd-integration
+ succeeded in 0ms:
+git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead
+git: error: couldn't create cache file '/tmp/xcrun_db-7Gru2ILw' (errno=Operation not permitted)
+git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead
+git: error: couldn't create cache file '/tmp/xcrun_db-fg9E9vjv' (errno=Operation not permitted)
+?? .jstack/artifacts/peer-review-codex-plan3-20260720T092007Z.raw
+git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead
+git: error: couldn't create cache file '/tmp/xcrun_db-yCZE4up8' (errno=Operation not permitted)
+git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead
+git: error: couldn't create cache file '/tmp/xcrun_db-r6W6509Y' (errno=Operation not permitted)
+fc941af (HEAD -> worktree-jep-495-adhd-integration) docs(plan): apply codex plan-review round-1 findings (JEP-495)
+926b9c5 docs(plan): 6.0.0 adhd-integration implementation plan (JEP-495)
+git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead
+git: error: couldn't create cache file '/tmp/xcrun_db-vteQ4y5j' (errno=Operation not permitted)
+git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead
+git: error: couldn't create cache file '/tmp/xcrun_db-63t2p0Of' (errno=Operation not permitted)
+     1	# ADHD Output Contract + Skill Cleanup (6.0.0) Implementation Plan
+     2	
+     3	> **For agentic workers:** REQUIRED SUB-SKILL: Use jstack:subagent-driven-development (recommended) or jstack:executing-plans to implement this plan by executable slices. Steps use checkbox (`- [ ]`) syntax for tracking.
+     4	
+     5	**Goal:** i-have-adhd 기반 Output Contract를 using-jstack에 추가하고, 미사용 스킬 3종 + deprecated 커맨드 3종을 정리하여 6.0.0을 릴리스한다.
+     6	
+     7	**Architecture:** 스펙 `docs/jstack/specs/2026-07-20-adhd-integration-design.md`(JEP-495)의 W1+W2. 각 태스크는 정적 계약 테스트(`tests/jstack-static/run.sh`)에 실패하는 어서션을 먼저 추가(RED)한 뒤 콘텐츠를 수정(GREEN)한다 — writing-skills Iron Law 준수. 6.1.0(token diet)은 별도 플랜.
+     8	
+     9	**Tech Stack:** Bash 정적 테스트, Claude Code plugin 구조 (skills/, commands/, hooks/), scripts/bump-version.sh
+    10	
+    11	**Plan Fidelity:** Interface-Level Plan — 기존 프로즈 편집이 대부분이라 전체 본문 재작성은 stale 위험이 있고, 새로 추가되는 두 프로즈 블록(Output Contract, Receiving Review Feedback)만 전문을 포함한다.
+    12	
+    13	**Worktree:** `.claude/worktrees/jep-495-adhd-integration` (branch `worktree-jep-495-adhd-integration`, base = local main `8ed2ee8`)
+    14	
+    15	**참조 노트:** 배포는 main 머지로 완결된다 — `~/.codex/skills/jstack`·`~/.codex/skills/superpowers`가 `~/.codex/jstack/skills` 심링크라서 Codex는 머지 즉시 반영, Claude Code plugin도 같은 체크아웃을 바라본다. RELEASE-NOTES·docs/plans·docs/superpowers 내 과거 기록의 스킬명 언급은 역사 기록이므로 수정하지 않는다.
+    16	
+    17	---
+    18	
+    19	### Task 1: receiving-code-review → peer-review 병합
+    20	
+    21	**Files:**
+    22	- Modify: `skills/peer-review/SKILL.md` (Finding Triage 섹션 앞에 새 섹션)
+    23	- Modify: `tests/jstack-static/run.sh`
+    24	- Delete: `skills/receiving-code-review/`
+    25	
+    26	**Test-first:** 행동 베이스라인 probe(RED) + 정적 어서션 — peer-review에 "Receiving Review Feedback" 섹션 존재 + receiving-code-review 디렉토리 부재
+    27	**Parallel:** sequential (Task 2와 같은 테스트 파일 수정)
+    28	
+    29	- [ ] **Step 0: Iron Law 베이스라인 probe (수정 전).** 현재(병합 전) peer-review SKILL.md만 컨텍스트로 넣고 리뷰 피드백 수신 시나리오를 1회 실행, 결과를 `.jstack/artifacts/pressure-task1-baseline.txt`에 저장:
+    30	
+    31	```bash
+    32	claude -p --model claude-haiku-4-5 "다음 스킬 지침을 따르라: $(cat skills/peer-review/SKILL.md)
+    33	
+    34	리뷰어가 '이 레거시 코드 제거하세요'라고 피드백했다. 어떻게 응답할지 답하라." > .jstack/artifacts/pressure-task1-baseline.txt
+    35	```
+    36	
+    37	기대(RED 근거): 현행 peer-review에는 수신 규율 섹션이 없어 성과적 동의 금지·검증 우선 지침이 응답에 반영된다는 보장이 없음을 기록.
+    38	
+    39	- [ ] **Step 1: RED — 어서션 추가.** `tests/jstack-static/run.sh`에 추가:
+    40	
+    41	```bash
+    42	grep -q "## Receiving Review Feedback" skills/peer-review/SKILL.md || fail "peer-review must absorb receiving-code-review discipline"
+    43	grep -q "performatively agree" skills/peer-review/SKILL.md || fail "peer-review must retain no-performative-agreement rule"
+    44	[[ ! -d skills/receiving-code-review ]] || fail "receiving-code-review must be merged into peer-review"
+    45	```
+    46	
+    47	- [ ] **Step 2: 실행 → FAIL 확인.** Run: `bash tests/jstack-static/run.sh` → Expected: FAIL "peer-review must absorb..."
+    48	
+    49	- [ ] **Step 3: peer-review SKILL.md에 병합.** `## Finding Triage` 섹션 바로 앞에 삽입 (핵심 규율 압축본, 유실 금지 항목: 성과적 동의 금지·검증 우선·불명확 항목 전체 클라리파이·한 항목씩 구현·기술적 pushback·GitHub 스레드 답글):
+    50	
+    51	```markdown
+    52	## Receiving Review Feedback
+    53	
+    54	When feedback arrives — from your human partner, a peer reviewer, or GitHub:
+    55	
+    56	1. READ all items without reacting. If any item is unclear, stop and ask before
+    57	   implementing any of them — items may be related, and partial understanding
+    58	   produces wrong implementations.
+    59	2. VERIFY each claim against codebase reality before implementing.
+    60	3. RESPOND technically. Never performatively agree — no "You're absolutely
+    61	   right!", no "Great point!", no gratitude. State the requirement, ask, push
+    62	   back with evidence, or just fix it: the diff is the acknowledgment.
+    63	4. IMPLEMENT one item at a time — blocking issues, then simple fixes, then
+    64	   complex ones — testing each before the next.
+    65	5. PUSH BACK with technical reasoning when a suggestion breaks existing
+    66	   functionality, lacks context, violates YAGNI (grep for actual usage first),
+    67	   or conflicts with your human partner's architectural decisions. If you
+    68	   pushed back and were wrong, state the correction factually and move on.
+    69	
+    70	For GitHub inline review comments, reply in the comment thread
+    71	(`gh api repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies`), not as a
+    72	top-level PR comment.
+    73	```
+    74	
+    75	- [ ] **Step 4: 디렉토리 삭제.** Run: `git rm -r skills/receiving-code-review`
+    76	
+    77	- [ ] **Step 5: GREEN 확인 + 사후 probe.** Run: `bash tests/jstack-static/run.sh` → Expected: `[PASS] jstack static contract`. Step 0과 동일한 probe를 병합된 SKILL.md로 재실행해 `.jstack/artifacts/pressure-task1-after.txt` 저장 → 기대: 응답이 검증-우선 패턴을 따르고 성과적 동의 문구("You're absolutely right" 류) 없음.
+    78	
+    79	- [ ] **Step 6: Commit.** `git add -A && git commit -m "refactor(skills): merge receiving-code-review into peer-review (JEP-495)"`
+    80	
+    81	### Task 2: requesting-code-review 스텁 삭제 + 트리거 테스트 재배선
+    82	
+    83	**Files:**
+    84	- Modify: `tests/jstack-static/run.sh:46` (기존 어서션 교체)
+    85	- Modify: `tests/skill-triggering/run-all.sh` (SKILLS 배열)
+    86	- Rename: `tests/skill-triggering/prompts/requesting-code-review.txt` → `peer-review.txt`
+    87	- Delete: `skills/requesting-code-review/`
+    88	
+    89	**Test-first:** 기존 line 46 어서션이 삭제 후 fail하므로 교체가 곧 테스트 갱신; 부재 어서션 추가
+    90	**Parallel:** sequential: needs Task 1
+    91	
+    92	- [ ] **Step 1: 정적 테스트 교체.** `tests/jstack-static/run.sh:46`의 `grep -q "jstack:" skills/requesting-code-review/SKILL.md ...` 줄을 다음으로 교체:
+    93	
+    94	```bash
+    95	[[ ! -d skills/requesting-code-review ]] || fail "requesting-code-review stub must be deleted (consolidated into peer-review)"
+    96	grep -q "## When to Request" skills/peer-review/SKILL.md || fail "peer-review must retain When to Request section"
+    97	```
+    98	
+    99	- [ ] **Step 2: RED 확인.** Run: `bash tests/jstack-static/run.sh` → Expected: FAIL "requesting-code-review stub must be deleted"
+   100	
+   101	- [ ] **Step 3: 삭제 + 트리거 테스트 재배선.**
+   102	
+   103	```bash
+   104	git rm -r skills/requesting-code-review
+   105	git mv tests/skill-triggering/prompts/requesting-code-review.txt tests/skill-triggering/prompts/peer-review.txt
+   106	```
+   107	
+   108	`tests/skill-triggering/run-all.sh`의 SKILLS 배열에서 `"requesting-code-review"`를 `"peer-review"`로 교체 (트리거 커버리지 유지 — 완료 후 리뷰 요청 프롬프트는 이제 peer-review를 트리거해야 함).
+   109	
+   110	- [ ] **Step 4: GREEN 확인 + 재배선된 트리거 테스트 실행.** Run: `bash tests/jstack-static/run.sh` → PASS. Run: `bash tests/skill-triggering/run-test.sh peer-review tests/skill-triggering/prompts/peer-review.txt 3` → Expected: 트리거 성공 (완료-후-리뷰 프롬프트가 peer-review를 트리거). 실패 시 프롬프트 문구를 peer-review description에 맞게 조정 후 재실행.
+   111	
+   112	- [ ] **Step 5: Commit.** `git commit -am "refactor(skills): delete requesting-code-review stub, retarget trigger test to peer-review (JEP-495)"`
+   113	
+   114	### Task 3: dispatching-parallel-agents 아카이브 + 라이브 참조 갱신
+   115	
+   116	**Files:**
+   117	- Move: `skills/dispatching-parallel-agents/` → `archive/skills/dispatching-parallel-agents/`
+   118	- Modify: `skills/subagent-driven-development/SKILL.md:74`, `skills/using-jstack/references/codex-tools.md:25`, `skills/using-jstack/references/gemini-tools.md:21`, `README.md:158-162` 부근, `docs/README.codex.md:35`
+   119	- Modify: `tests/jstack-static/run.sh`, `tests/skill-triggering/run-all.sh` (배열에서 제거), Delete: `tests/skill-triggering/prompts/dispatching-parallel-agents.txt`
+   120	
+   121	**Test-first:** 부재 + 아카이브 존재 + 라이브 참조 0건 어서션
+   122	**Parallel:** sequential: needs Task 2 (같은 테스트 파일)
+   123	
+   124	- [ ] **Step 1: RED — 어서션 추가.** `tests/jstack-static/run.sh`에 추가:
+   125	
+   126	```bash
+   127	[[ ! -d skills/dispatching-parallel-agents ]] || fail "dispatching-parallel-agents must be archived"
+   128	[[ -f archive/skills/dispatching-parallel-agents/SKILL.md ]] || fail "archived dispatching-parallel-agents must be preserved"
+   129	! rg -q --no-messages "dispatching-parallel-agents" skills/ commands/ hooks/ 2>/dev/null || fail "no live references to archived skill"
+   130	```
+   131	
+   132	Run → Expected: FAIL "must be archived"
+   133	
+   134	- [ ] **Step 2: 아카이브 이동.** `mkdir -p archive/skills && git mv skills/dispatching-parallel-agents archive/skills/`
+   135	
+   136	- [ ] **Step 3: 라이브 참조 갱신.**
+   137	  - `skills/subagent-driven-development/SKILL.md:74`: "dispatch them concurrently in one batch via jstack:dispatching-parallel-agents" → "dispatch them concurrently in one batch (multiple agent invocations in a single message)"
+   138	  - `skills/using-jstack/references/codex-tools.md:25` / `gemini-tools.md:21`: dispatching-parallel-agents 언급을 subagent-driven-development만 남기고 제거
+   139	  - `README.md` 스킬 목록: requesting-code-review·receiving-code-review·dispatching-parallel-agents 항목 제거 (Task 1-2 잔여분 포함)
+   140	  - `docs/README.codex.md:35`: dispatching-parallel-agents 언급 제거
+   141	  - `tests/skill-triggering/run-all.sh` SKILLS 배열에서 `"dispatching-parallel-agents"` 제거, `git rm tests/skill-triggering/prompts/dispatching-parallel-agents.txt`
+   142	
+   143	- [ ] **Step 4: GREEN + 잔여 참조 스캔 (스펙 W1.5 전체 경로).** Run: `bash tests/jstack-static/run.sh` → PASS. Run:
+   144	
+   145	```bash
+   146	rg -ln "requesting-code-review|receiving-code-review|dispatching-parallel-agents" \
+   147	  skills/ commands/ hooks/ tests/ docs/ README.md AGENTS.md CLAUDE.md GEMINI.md \
+   148	  --glob '!docs/plans/**' --glob '!docs/superpowers/**' \
+   149	  --glob '!docs/jstack/plans/**' --glob '!docs/jstack/specs/**' 2>/dev/null
+   150	```
+   151	
+   152	Expected: 출력 없음 (역사 기록 — RELEASE-NOTES.md, 과거 plans/specs — 만 제외 대상이며 라이브 문서·테스트·스킬은 전부 스캔에 포함)
+   153	
+   154	- [ ] **Step 5: Commit.** `git commit -am "refactor(skills): archive dispatching-parallel-agents, update live references (JEP-495)"`
+   155	
+   156	### Task 4: deprecated 커맨드 3종 삭제
+   157	
+   158	**Files:**
+   159	- Delete: `commands/brainstorm.md`, `commands/write-plan.md`, `commands/execute-plan.md`
+   160	- Modify: `tests/jstack-static/run.sh`
+   161	
+   162	**Test-first:** 부재 어서션
+   163	**Parallel:** sequential: needs Task 3 (같은 테스트 파일)
+   164	
+   165	- [ ] **Step 1: RED.** 어서션 추가: `[[ ! -f commands/brainstorm.md && ! -f commands/write-plan.md && ! -f commands/execute-plan.md ]] || fail "deprecated commands must be removed in 6.0.0"` → Run → FAIL
+   166	
+   167	- [ ] **Step 2: 삭제.** `git rm commands/brainstorm.md commands/write-plan.md commands/execute-plan.md` (commands/ 디렉토리가 비면 plugin manifest가 commands를 요구하는지 `.claude-plugin/plugin.json` 확인 — commands 키 없음, 디렉토리 부재 허용)
+   168	
+   169	- [ ] **Step 3: GREEN.** Run: `bash tests/jstack-static/run.sh` → PASS
+   170	
+   171	- [ ] **Step 4: Commit.** `git commit -am "feat(commands)!: remove deprecated brainstorm/write-plan/execute-plan commands (JEP-495)"`
+   172	
+   173	### Task 5: Output Contract 추가 (using-jstack)
+   174	
+   175	**Files:**
+   176	- Modify: `skills/using-jstack/SKILL.md` (파일 말미에 새 섹션)
+   177	- Modify: `tests/jstack-static/run.sh`
+   178	
+   179	**Test-first:** 콘텐츠 존재 어서션 + session-start JSON 유효성
+   180	**Parallel:** sequential: needs Task 4 (같은 테스트 파일)
+   181	
+   182	- [ ] **Step 1: RED — 어서션 추가.**
+   183	
+   184	```bash
+   185	grep -q "## Output Contract" skills/using-jstack/SKILL.md || fail "using-jstack must include ADHD output contract"
+   186	grep -q "ayghri/i-have-adhd" skills/using-jstack/SKILL.md || fail "output contract must credit source"
+   187	grep -q "conversational and status output only" skills/using-jstack/SKILL.md || fail "output contract must scope to conversational output"
+   188	```
+   189	
+   190	Run → FAIL
+   191	
+   192	**[Step 3에서 삽입할 전문]** — `skills/using-jstack/SKILL.md` 말미(`## User Instructions` 섹션 뒤)에 삽입:
+   193	
+   194	```markdown
+   195	## Output Contract
+   196	
+   197	<!-- Adapted from ayghri/i-have-adhd (MIT) — condensed and adapted for jstack -->
+   198	
+   199	Scope: **conversational and status output only.** Artifacts — specs, plans,
+   200	docs, commit messages, code comments, review reports — follow their owning
+   201	skill's fidelity requirements, not this contract.
+   202	
+   203	1. Lead with the verdict or action. No warm-up context before the point.
+   204	2. Number multi-step work. Keep lists to 5 items or fewer.
+   205	3. When a turn advances multi-step work, end with 1-2 lines: current position →
+   206	   next step. Include the Linear issue ID when the work is linked to one. Skip
+   207	   this on short Q&A turns.
+   208	4. Suppress tangents — unrequested side topics get one line at most.
+   209	5. Give effort sizing (S/M/L) and the next checkpoint instead of time estimates.
+   210	6. On errors and failures: calm, factual tone. No repeated apologies.
+   211	7. No closing filler — no "hope this helps," no pleasantries.
+   212	
+   213	Exceptions override rules: when the user asks for explanation, when ambiguity
+   214	needs a clarifying question, and when a destructive action needs confirmation.
+   215	```
+   216	
+   217	- [ ] **Step 2: Iron Law 베이스라인 probe (수정 전).** 현행(contract 없는) using-jstack SKILL.md를 컨텍스트로 두 시나리오 실행, `.jstack/artifacts/pressure-task5-baseline-{a,b}.txt` 저장:
+   218	  - (a) 짧은 질문("git stash와 stash pop 차이?")
+   219	  - (b) "인증 모듈 스펙 초안 작성해줘"
+   220	  기대(RED 근거): (a)에서 도입부/마무리 인사 억제가 보장되지 않음을 기록.
+   221	
+   222	```bash
+   223	claude -p --model claude-haiku-4-5 "다음 지침을 따르라: $(cat skills/using-jstack/SKILL.md)
+   224	
+   225	git stash와 stash pop 차이?" > .jstack/artifacts/pressure-task5-baseline-a.txt
+   226	```
+   227	
+   228	(b)도 동일 형식. 섹션 추가 후 같은 명령을 `after-{a,b}.txt`로 재실행한다.
+   229	
+   230	- [ ] **Step 3: 섹션 추가.** 위의 [Step 3에서 삽입할 전문] 블록을 그대로 삽입.
+   231	
+   232	- [ ] **Step 4: GREEN + 주입 검증.** Run: `bash tests/jstack-static/run.sh` → PASS. Run: `bash hooks/session-start | python3 -m json.tool > /dev/null && bash hooks/session-start | grep -c "Output Contract"` → Expected: JSON 유효 + `1` 이상
+   233	
+   234	- [ ] **Step 5: 사후 probe 비교.** Step 2와 동일 명령을 새 SKILL.md로 재실행 → 기대: (a) 도입부·마무리 인사 없음, 5개 이하 리스트 (b) 상세한 아티팩트 출력 유지(contract의 artifact 예외 동작). 베이스라인 대비 비교 판정, 실패 시 contract 문구 수정 후 재실행.
+   235	
+   236	- [ ] **Step 6: Commit.** `git commit -am "feat(using-jstack): add ADHD output contract for conversational output (JEP-495)"`
+   237	
+   238	### Task 6: 버전 6.0.0 + RELEASE-NOTES + 최종 검증
+   239	
+   240	**Files:**
+   241	- Modify: `.version-bump.json` 선언 파일 6종 (scripts/bump-version.sh가 처리), `RELEASE-NOTES.md`
+   242	
+   243	**Test-first:** N/A — no behavior change (버전 메타데이터)
+   244	**Parallel:** sequential: needs Task 5
+   245	
+   246	- [ ] **Step 1: 버전 범프.** Run: `bash scripts/bump-version.sh 6.0.0 && bash scripts/bump-version.sh --audit` → Expected: 선언 파일 전부 6.0.0, audit에서 잔여 5.5.1 없음
+   247	
+   248	- [ ] **Step 2: RELEASE-NOTES 추가.** 최상단에 6.0.0 항목: Output Contract 추가(출처 크레딧), 스킬 정리 3종(breaking — 명시적 호출자는 peer-review 사용), deprecated 커맨드 제거(major 약속 이행), 테스트 재배선.
+   249	
+   250	- [ ] **Step 3: 전체 검증 (실패 마스킹 금지 — `&&` 체인만 사용).**
+   251	
+   252	```bash
+   253	bash tests/jstack-static/run.sh \
+   254	  && bash hooks/session-start | python3 -m json.tool > /dev/null \
+   255	  && bash hooks/session-start | grep -q "Output Contract" \
+   256	  && echo INJECTION-OK
+   257	```
+   258	
+   259	Expected: `[PASS]` + `INJECTION-OK`. 이어서 구버전 문자열 스캔 (bump-version --audit는 신버전 존재만 확인하므로 별도):
+   260	
+   261	```bash
+   262	rg -n "5\.5\.1" package.json .claude-plugin .cursor-plugin gemini-extension.json hooks scripts skills commands tests 2>/dev/null
+   263	```
+   264	
+   265	Expected: 출력 없음
+   266	
+   267	- [ ] **Step 4: Commit.** `git commit -am "chore: release jstack 6.0.0 (JEP-495)"`
+   268	
+   269	---
+   270	
+   271	## 검증 요약 (스펙 게이트 매핑)
+   272	
+   273	| 스펙 게이트 | 플랜 커버 |
+   274	|---|---|
+   275	| Iron Law (수정 전 실패 테스트) | 각 태스크 Step 1 RED 어서션 + Task 5 Step 4 pressure smoke |
+   276	| 테스트 갱신이 삭제와 같은 커밋 | Task 2·3 내 동시 수정 |
+   277	| session-start JSON + contract 포함 | Task 5 Step 3, Task 6 Step 3 |
+   278	| 상호 참조 0건 | Task 3 Step 4 |
+   279	| 6.0.0 범프 + RELEASE-NOTES | Task 6 |
+   280	| 하네스별 전달 확인 (스펙 W2) | 머지 후 finishing 단계에서 전 하네스 확인: **Claude Code** `bash hooks/session-start` 주입에 contract 포함(Task 5·6에서 선검증) · **Codex** `grep -q "Output Contract" ~/.codex/skills/jstack/using-jstack/SKILL.md` (심링크라 머지 즉시 반영) · **Gemini** `gemini-extension.json` 버전 6.0.0 + GEMINI.md의 스킬 로드 경로가 skills/ 유지 확인 · **OpenCode** `.opencode` 플러그인의 skills 디렉토리 참조가 삭제된 3개 스킬을 하드코딩하지 않음(`rg "requesting-code-review|receiving-code-review|dispatching-parallel-agents" .opencode/` 0건) |
+   281	
+   282	## JSTACK REVIEW REPORT
+   283	
+   284	| Check | Reviewer | Runs | Status | Findings | Artifact |
+   285	|---|---|---:|---|---|---|
+   286	| Spec Review | codex | 1 | Pass (issues fixed) | BLOCKING 2 + HIGH 3 반영 | .jstack/artifacts/peer-review-codex-plan-20260720T090205Z.md |
+   287	| Plan Review | codex | 1 | Issues Found → 반영됨 | BLOCKING 3 (Iron Law probe 부재, 하네스 검증 누락, shell-lint 오참조) + HIGH 3 (트리거 미실행, 스캔 범위, audit 한계) — 전부 수용·플랜 반영 | .jstack/artifacts/peer-review-codex-plan2-*.md |
+   288	| Verification | Local tests | 0 | Pending | - | - |
+   289	
+   290	## Execution Handoff
+   291	
+   292	Inline Execution (jstack:executing-plans) 권장 — 태스크 6개가 전부 같은 테스트 파일·프로즈 영역을 순차 수정하고, 개별 태스크가 2-10분 규모라 subagent 오버헤드가 구현 비용을 초과한다. 자율 진행 승인됨.
+
+hook: PostToolUse
+hook: PostToolUse Completed
+codex
+The round-two plan now contains explicit pre-edit probes, a direct peer-review trigger run, broader reference scanning, chained failure propagation, and a separate stale-version scan. I’m checking whether those added commands are executable as written and whether any of the new verification steps can falsely pass.
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc 'git show --stat --oneline fc941af && git show --format=fuller --no-ext-diff --unified=80 fc941af -- docs/jstack/plans/2026-07-20-adhd-integration-6.0.0.md && for f in AGENTS.md CLAUDE.md GEMINI.md README.md docs/README.codex.md package.json gemini-extension.json .claude-plugin/plugin.json .version-bump.json tests/skill-triggering/run-test.sh tests/skill-triggering/run-all.sh scripts/bump-version.sh hooks/session-start; do if [[ -e "$f" ]]; then printf '"'%s\\tEXISTS\\n' \""'$f"; else printf '"'%s\\tMISSING\\n' \""'$f"; fi; done && rg -n "W1'"\\.5|W2|harness|Claude Code|Codex|Gemini|OpenCode|version|6\\.0\\.0|5\\.5\\.1\" docs/jstack/specs/2026-07-20-adhd-integration-design.md" in /Users/kakao1/.codex/jstack/.claude/worktrees/jep-495-adhd-integration
+ succeeded in 0ms:
+git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead
+git: error: couldn't create cache file '/tmp/xcrun_db-cnWUEaBr' (errno=Operation not permitted)
+git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead
+git: error: couldn't create cache file '/tmp/xcrun_db-FSWU8aUD' (errno=Operation not permitted)
+fc941af docs(plan): apply codex plan-review round-1 findings (JEP-495)
+ .../peer-review-codex-plan2-20260720T091359Z.md    |   27 +
+ .../peer-review-codex-plan2-20260720T091359Z.raw   | 2852 ++++++++++++++++++++
+ .../plans/2026-07-20-adhd-integration-6.0.0.md     |   74 +-
+ 3 files changed, 2939 insertions(+), 14 deletions(-)
+git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead
+git: error: couldn't create cache file '/tmp/xcrun_db-IxalUquv' (errno=Operation not permitted)
+git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead
+git: error: couldn't create cache file '/tmp/xcrun_db-SC4zrSFP' (errno=Operation not permitted)
+commit fc941affddb5f06f18b55b21028a0b8ab3020104
+Author:     jungsooyun <yunj415@gmail.com>
+AuthorDate: Mon Jul 20 18:19:55 2026 +0900
+Commit:     jungsooyun <yunj415@gmail.com>
+CommitDate: Mon Jul 20 18:19:55 2026 +0900
+
+    docs(plan): apply codex plan-review round-1 findings (JEP-495)
+
+diff --git a/docs/jstack/plans/2026-07-20-adhd-integration-6.0.0.md b/docs/jstack/plans/2026-07-20-adhd-integration-6.0.0.md
+index 099f943..ba929a7 100644
+--- a/docs/jstack/plans/2026-07-20-adhd-integration-6.0.0.md
++++ b/docs/jstack/plans/2026-07-20-adhd-integration-6.0.0.md
+@@ -1,246 +1,292 @@
+ # ADHD Output Contract + Skill Cleanup (6.0.0) Implementation Plan
+ 
+ > **For agentic workers:** REQUIRED SUB-SKILL: Use jstack:subagent-driven-development (recommended) or jstack:executing-plans to implement this plan by executable slices. Steps use checkbox (`- [ ]`) syntax for tracking.
+ 
+ **Goal:** i-have-adhd 기반 Output Contract를 using-jstack에 추가하고, 미사용 스킬 3종 + deprecated 커맨드 3종을 정리하여 6.0.0을 릴리스한다.
+ 
+ **Architecture:** 스펙 `docs/jstack/specs/2026-07-20-adhd-integration-design.md`(JEP-495)의 W1+W2. 각 태스크는 정적 계약 테스트(`tests/jstack-static/run.sh`)에 실패하는 어서션을 먼저 추가(RED)한 뒤 콘텐츠를 수정(GREEN)한다 — writing-skills Iron Law 준수. 6.1.0(token diet)은 별도 플랜.
+ 
+ **Tech Stack:** Bash 정적 테스트, Claude Code plugin 구조 (skills/, commands/, hooks/), scripts/bump-version.sh
+ 
+ **Plan Fidelity:** Interface-Level Plan — 기존 프로즈 편집이 대부분이라 전체 본문 재작성은 stale 위험이 있고, 새로 추가되는 두 프로즈 블록(Output Contract, Receiving Review Feedback)만 전문을 포함한다.
+ 
+ **Worktree:** `.claude/worktrees/jep-495-adhd-integration` (branch `worktree-jep-495-adhd-integration`, base = local main `8ed2ee8`)
+ 
+ **참조 노트:** 배포는 main 머지로 완결된다 — `~/.codex/skills/jstack`·`~/.codex/skills/superpowers`가 `~/.codex/jstack/skills` 심링크라서 Codex는 머지 즉시 반영, Claude Code plugin도 같은 체크아웃을 바라본다. RELEASE-NOTES·docs/plans·docs/superpowers 내 과거 기록의 스킬명 언급은 역사 기록이므로 수정하지 않는다.
+ 
+ ---
+ 
+ ### Task 1: receiving-code-review → peer-review 병합
+ 
+ **Files:**
+ - Modify: `skills/peer-review/SKILL.md` (Finding Triage 섹션 앞에 새 섹션)
+ - Modify: `tests/jstack-static/run.sh`
+ - Delete: `skills/receiving-code-review/`
+ 
+-**Test-first:** 정적 어서션 — peer-review에 "Receiving Review Feedback" 섹션 존재 + receiving-code-review 디렉토리 부재
++**Test-first:** 행동 베이스라인 probe(RED) + 정적 어서션 — peer-review에 "Receiving Review Feedback" 섹션 존재 + receiving-code-review 디렉토리 부재
+ **Parallel:** sequential (Task 2와 같은 테스트 파일 수정)
+ 
++- [ ] **Step 0: Iron Law 베이스라인 probe (수정 전).** 현재(병합 전) peer-review SKILL.md만 컨텍스트로 넣고 리뷰 피드백 수신 시나리오를 1회 실행, 결과를 `.jstack/artifacts/pressure-task1-baseline.txt`에 저장:
++
++```bash
++claude -p --model claude-haiku-4-5 "다음 스킬 지침을 따르라: $(cat skills/peer-review/SKILL.md)
++
++리뷰어가 '이 레거시 코드 제거하세요'라고 피드백했다. 어떻게 응답할지 답하라." > .jstack/artifacts/pressure-task1-baseline.txt
++```
++
++기대(RED 근거): 현행 peer-review에는 수신 규율 섹션이 없어 성과적 동의 금지·검증 우선 지침이 응답에 반영된다는 보장이 없음을 기록.
++
+ - [ ] **Step 1: RED — 어서션 추가.** `tests/jstack-static/run.sh`에 추가:
+ 
+ ```bash
+ grep -q "## Receiving Review Feedback" skills/peer-review/SKILL.md || fail "peer-review must absorb receiving-code-review discipline"
+ grep -q "performatively agree" skills/peer-review/SKILL.md || fail "peer-review must retain no-performative-agreement rule"
+ [[ ! -d skills/receiving-code-review ]] || fail "receiving-code-review must be merged into peer-review"
+ ```
+ 
+ - [ ] **Step 2: 실행 → FAIL 확인.** Run: `bash tests/jstack-static/run.sh` → Expected: FAIL "peer-review must absorb..."
+ 
+ - [ ] **Step 3: peer-review SKILL.md에 병합.** `## Finding Triage` 섹션 바로 앞에 삽입 (핵심 규율 압축본, 유실 금지 항목: 성과적 동의 금지·검증 우선·불명확 항목 전체 클라리파이·한 항목씩 구현·기술적 pushback·GitHub 스레드 답글):
+ 
+ ```markdown
+ ## Receiving Review Feedback
+ 
+ When feedback arrives — from your human partner, a peer reviewer, or GitHub:
+ 
+ 1. READ all items without reacting. If any item is unclear, stop and ask before
+    implementing any of them — items may be related, and partial understanding
+    produces wrong implementations.
+ 2. VERIFY each claim against codebase reality before implementing.
+ 3. RESPOND technically. Never performatively agree — no "You're absolutely
+    right!", no "Great point!", no gratitude. State the requirement, ask, push
+    back with evidence, or just fix it: the diff is the acknowledgment.
+ 4. IMPLEMENT one item at a time — blocking issues, then simple fixes, then
+    complex ones — testing each before the next.
+ 5. PUSH BACK with technical reasoning when a suggestion breaks existing
+    functionality, lacks context, violates YAGNI (grep for actual usage first),
+    or conflicts with your human partner's architectural decisions. If you
+    pushed back and were wrong, state the correction factually and move on.
+ 
+ For GitHub inline review comments, reply in the comment thread
+ (`gh api repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies`), not as a
+ top-level PR comment.
+ ```
+ 
+ - [ ] **Step 4: 디렉토리 삭제.** Run: `git rm -r skills/receiving-code-review`
+ 
+-- [ ] **Step 5: GREEN 확인.** Run: `bash tests/jstack-static/run.sh` → Expected: `[PASS] jstack static contract`
++- [ ] **Step 5: GREEN 확인 + 사후 probe.** Run: `bash tests/jstack-static/run.sh` → Expected: `[PASS] jstack static contract`. Step 0과 동일한 probe를 병합된 SKILL.md로 재실행해 `.jstack/artifacts/pressure-task1-after.txt` 저장 → 기대: 응답이 검증-우선 패턴을 따르고 성과적 동의 문구("You're absolutely right" 류) 없음.
+ 
+ - [ ] **Step 6: Commit.** `git add -A && git commit -m "refactor(skills): merge receiving-code-review into peer-review (JEP-495)"`
+ 
+ ### Task 2: requesting-code-review 스텁 삭제 + 트리거 테스트 재배선
+ 
+ **Files:**
+ - Modify: `tests/jstack-static/run.sh:46` (기존 어서션 교체)
+ - Modify: `tests/skill-triggering/run-all.sh` (SKILLS 배열)
+ - Rename: `tests/skill-triggering/prompts/requesting-code-review.txt` → `peer-review.txt`
+ - Delete: `skills/requesting-code-review/`
+ 
+ **Test-first:** 기존 line 46 어서션이 삭제 후 fail하므로 교체가 곧 테스트 갱신; 부재 어서션 추가
+ **Parallel:** sequential: needs Task 1
+ 
+ - [ ] **Step 1: 정적 테스트 교체.** `tests/jstack-static/run.sh:46`의 `grep -q "jstack:" skills/requesting-code-review/SKILL.md ...` 줄을 다음으로 교체:
+ 
+ ```bash
+ [[ ! -d skills/requesting-code-review ]] || fail "requesting-code-review stub must be deleted (consolidated into peer-review)"
+ grep -q "## When to Request" skills/peer-review/SKILL.md || fail "peer-review must retain When to Request section"
+ ```
+ 
+ - [ ] **Step 2: RED 확인.** Run: `bash tests/jstack-static/run.sh` → Expected: FAIL "requesting-code-review stub must be deleted"
+ 
+ - [ ] **Step 3: 삭제 + 트리거 테스트 재배선.**
+ 
+ ```bash
+ git rm -r skills/requesting-code-review
+ git mv tests/skill-triggering/prompts/requesting-code-review.txt tests/skill-triggering/prompts/peer-review.txt
+ ```
+ 
+ `tests/skill-triggering/run-all.sh`의 SKILLS 배열에서 `"requesting-code-review"`를 `"peer-review"`로 교체 (트리거 커버리지 유지 — 완료 후 리뷰 요청 프롬프트는 이제 peer-review를 트리거해야 함).
+ 
+-- [ ] **Step 4: GREEN 확인.** Run: `bash tests/jstack-static/run.sh` → Expected: PASS
++- [ ] **Step 4: GREEN 확인 + 재배선된 트리거 테스트 실행.** Run: `bash tests/jstack-static/run.sh` → PASS. Run: `bash tests/skill-triggering/run-test.sh peer-review tests/skill-triggering/prompts/peer-review.txt 3` → Expected: 트리거 성공 (완료-후-리뷰 프롬프트가 peer-review를 트리거). 실패 시 프롬프트 문구를 peer-review description에 맞게 조정 후 재실행.
+ 
+ - [ ] **Step 5: Commit.** `git commit -am "refactor(skills): delete requesting-code-review stub, retarget trigger test to peer-review (JEP-495)"`
+ 
+ ### Task 3: dispatching-parallel-agents 아카이브 + 라이브 참조 갱신
+ 
+ **Files:**
+ - Move: `skills/dispatching-parallel-agents/` → `archive/skills/dispatching-parallel-agents/`
+ - Modify: `skills/subagent-driven-development/SKILL.md:74`, `skills/using-jstack/references/codex-tools.md:25`, `skills/using-jstack/references/gemini-tools.md:21`, `README.md:158-162` 부근, `docs/README.codex.md:35`
+ - Modify: `tests/jstack-static/run.sh`, `tests/skill-triggering/run-all.sh` (배열에서 제거), Delete: `tests/skill-triggering/prompts/dispatching-parallel-agents.txt`
+ 
+ **Test-first:** 부재 + 아카이브 존재 + 라이브 참조 0건 어서션
+ **Parallel:** sequential: needs Task 2 (같은 테스트 파일)
+ 
+ - [ ] **Step 1: RED — 어서션 추가.** `tests/jstack-static/run.sh`에 추가:
+ 
+ ```bash
+ [[ ! -d skills/dispatching-parallel-agents ]] || fail "dispatching-parallel-agents must be archived"
+ [[ -f archive/skills/dispatching-parallel-agents/SKILL.md ]] || fail "archived dispatching-parallel-agents must be preserved"
+ ! rg -q --no-messages "dispatching-parallel-agents" skills/ commands/ hooks/ 2>/dev/null || fail "no live references to archived skill"
+ ```
+ 
+ Run → Expected: FAIL "must be archived"
+ 
+ - [ ] **Step 2: 아카이브 이동.** `mkdir -p archive/skills && git mv skills/dispatching-parallel-agents archive/skills/`
+ 
+ - [ ] **Step 3: 라이브 참조 갱신.**
+   - `skills/subagent-driven-development/SKILL.md:74`: "dispatch them concurrently in one batch via jstack:dispatching-parallel-agents" → "dispatch them concurrently in one batch (multiple agent invocations in a single message)"
+   - `skills/using-jstack/references/codex-tools.md:25` / `gemini-tools.md:21`: dispatching-parallel-agents 언급을 subagent-driven-development만 남기고 제거
+   - `README.md` 스킬 목록: requesting-code-review·receiving-code-review·dispatching-parallel-agents 항목 제거 (Task 1-2 잔여분 포함)
+   - `docs/README.codex.md:35`: dispatching-parallel-agents 언급 제거
+   - `tests/skill-triggering/run-all.sh` SKILLS 배열에서 `"dispatching-parallel-agents"` 제거, `git rm tests/skill-triggering/prompts/dispatching-parallel-agents.txt`
+ 
+-- [ ] **Step 4: GREEN + 잔여 참조 스캔.** Run: `bash tests/jstack-static/run.sh` → PASS. Run: `rg -l "requesting-code-review|receiving-code-review|dispatching-parallel-agents" skills/ commands/ hooks/ README.md` → Expected: 출력 없음
++- [ ] **Step 4: GREEN + 잔여 참조 스캔 (스펙 W1.5 전체 경로).** Run: `bash tests/jstack-static/run.sh` → PASS. Run:
++
++```bash
++rg -ln "requesting-code-review|receiving-code-review|dispatching-parallel-agents" \
++  skills/ commands/ hooks/ tests/ docs/ README.md AGENTS.md CLAUDE.md GEMINI.md \
++  --glob '!docs/plans/**' --glob '!docs/superpowers/**' \
++  --glob '!docs/jstack/plans/**' --glob '!docs/jstack/specs/**' 2>/dev/null
++```
++
++Expected: 출력 없음 (역사 기록 — RELEASE-NOTES.md, 과거 plans/specs — 만 제외 대상이며 라이브 문서·테스트·스킬은 전부 스캔에 포함)
+ 
+ - [ ] **Step 5: Commit.** `git commit -am "refactor(skills): archive dispatching-parallel-agents, update live references (JEP-495)"`
+ 
+ ### Task 4: deprecated 커맨드 3종 삭제
+ 
+ **Files:**
+ - Delete: `commands/brainstorm.md`, `commands/write-plan.md`, `commands/execute-plan.md`
+ - Modify: `tests/jstack-static/run.sh`
+ 
+ **Test-first:** 부재 어서션
+ **Parallel:** sequential: needs Task 3 (같은 테스트 파일)
+ 
+ - [ ] **Step 1: RED.** 어서션 추가: `[[ ! -f commands/brainstorm.md && ! -f commands/write-plan.md && ! -f commands/execute-plan.md ]] || fail "deprecated commands must be removed in 6.0.0"` → Run → FAIL
+ 
+ - [ ] **Step 2: 삭제.** `git rm commands/brainstorm.md commands/write-plan.md commands/execute-plan.md` (commands/ 디렉토리가 비면 plugin manifest가 commands를 요구하는지 `.claude-plugin/plugin.json` 확인 — commands 키 없음, 디렉토리 부재 허용)
+ 
+ - [ ] **Step 3: GREEN.** Run: `bash tests/jstack-static/run.sh` → PASS
+ 
+ - [ ] **Step 4: Commit.** `git commit -am "feat(commands)!: remove deprecated brainstorm/write-plan/execute-plan commands (JEP-495)"`
+ 
+ ### Task 5: Output Contract 추가 (using-jstack)
+ 
+ **Files:**
+ - Modify: `skills/using-jstack/SKILL.md` (파일 말미에 새 섹션)
+ - Modify: `tests/jstack-static/run.sh`
+ 
+ **Test-first:** 콘텐츠 존재 어서션 + session-start JSON 유효성
+ **Parallel:** sequential: needs Task 4 (같은 테스트 파일)
+ 
+ - [ ] **Step 1: RED — 어서션 추가.**
+ 
+ ```bash
+ grep -q "## Output Contract" skills/using-jstack/SKILL.md || fail "using-jstack must include ADHD output contract"
+ grep -q "ayghri/i-have-adhd" skills/using-jstack/SKILL.md || fail "output contract must credit source"
+ grep -q "conversational and status output only" skills/using-jstack/SKILL.md || fail "output contract must scope to conversational output"
+ ```
+ 
+ Run → FAIL
+ 
+-- [ ] **Step 2: 섹션 추가.** `skills/using-jstack/SKILL.md` 말미(`## User Instructions` 섹션 뒤)에 삽입 — 아래 전문 그대로:
++**[Step 3에서 삽입할 전문]** — `skills/using-jstack/SKILL.md` 말미(`## User Instructions` 섹션 뒤)에 삽입:
+ 
+ ```markdown
+ ## Output Contract
+ 
+ <!-- Adapted from ayghri/i-have-adhd (MIT) — condensed and adapted for jstack -->
+ 
+ Scope: **conversational and status output only.** Artifacts — specs, plans,
+ docs, commit messages, code comments, review reports — follow their owning
+ skill's fidelity requirements, not this contract.
+ 
+ 1. Lead with the verdict or action. No warm-up context before the point.
+ 2. Number multi-step work. Keep lists to 5 items or fewer.
+ 3. When a turn advances multi-step work, end with 1-2 lines: current position →
+    next step. Include the Linear issue ID when the work is linked to one. Skip
+    this on short Q&A turns.
+ 4. Suppress tangents — unrequested side topics get one line at most.
+ 5. Give effort sizing (S/M/L) and the next checkpoint instead of time estimates.
+ 6. On errors and failures: calm, factual tone. No repeated apologies.
+ 7. No closing filler — no "hope this helps," no pleasantries.
+ 
+ Exceptions override rules: when the user asks for explanation, when ambiguity
+ needs a clarifying question, and when a destructive action needs confirmation.
+ ```
+ 
+-- [ ] **Step 3: GREEN + 주입 검증.** Run: `bash tests/jstack-static/run.sh` → PASS. Run: `bash hooks/session-start | python3 -m json.tool > /dev/null && bash hooks/session-start | grep -c "Output Contract"` → Expected: JSON 유효 + `1` 이상
++- [ ] **Step 2: Iron Law 베이스라인 probe (수정 전).** 현행(contract 없는) using-jstack SKILL.md를 컨텍스트로 두 시나리오 실행, `.jstack/artifacts/pressure-task5-baseline-{a,b}.txt` 저장:
++  - (a) 짧은 질문("git stash와 stash pop 차이?")
++  - (b) "인증 모듈 스펙 초안 작성해줘"
++  기대(RED 근거): (a)에서 도입부/마무리 인사 억제가 보장되지 않음을 기록.
+ 
+-- [ ] **Step 4: Pressure smoke (Iron Law 시나리오).** 새 SKILL.md 전문을 시스템 컨텍스트로 넣은 1회성 프로브 2발:
+-  - (a) 짧은 질문("git stash와 stash pop 차이?") → 기대: 도입부·마무리 인사 없음, 상태 라인 없음(short Q&A 예외 동작)
+-  - (b) "인증 모듈 스펙 초안 작성해줘" → 기대: 상세한 아티팩트 출력 유지(contract 미적용 확인)
+-  결과를 `.jstack/artifacts/`에 저장하고 육안 판정. 실패 시 contract 문구 수정 후 재실행.
++```bash
++claude -p --model claude-haiku-4-5 "다음 지침을 따르라: $(cat skills/using-jstack/SKILL.md)
++
++git stash와 stash pop 차이?" > .jstack/artifacts/pressure-task5-baseline-a.txt
++```
+ 
+-- [ ] **Step 5: Commit.** `git commit -am "feat(using-jstack): add ADHD output contract for conversational output (JEP-495)"`
++(b)도 동일 형식. 섹션 추가 후 같은 명령을 `after-{a,b}.txt`로 재실행한다.
++
++- [ ] **Step 3: 섹션 추가.** 위의 [Step 3에서 삽입할 전문] 블록을 그대로 삽입.
++
++- [ ] **Step 4: GREEN + 주입 검증.** Run: `bash tests/jstack-static/run.sh` → PASS. Run: `bash hooks/session-start | python3 -m json.tool > /dev/null && bash hooks/session-start | grep -c "Output Contract"` → Expected: JSON 유효 + `1` 이상
++
++- [ ] **Step 5: 사후 probe 비교.** Step 2와 동일 명령을 새 SKILL.md로 재실행 → 기대: (a) 도입부·마무리 인사 없음, 5개 이하 리스트 (b) 상세한 아티팩트 출력 유지(contract의 artifact 예외 동작). 베이스라인 대비 비교 판정, 실패 시 contract 문구 수정 후 재실행.
++
++- [ ] **Step 6: Commit.** `git commit -am "feat(using-jstack): add ADHD output contract for conversational output (JEP-495)"`
+ 
+ ### Task 6: 버전 6.0.0 + RELEASE-NOTES + 최종 검증
+ 
+ **Files:**
+ - Modify: `.version-bump.json` 선언 파일 6종 (scripts/bump-version.sh가 처리), `RELEASE-NOTES.md`
+ 
+ **Test-first:** N/A — no behavior change (버전 메타데이터)
+ **Parallel:** sequential: needs Task 5
+ 
+ - [ ] **Step 1: 버전 범프.** Run: `bash scripts/bump-version.sh 6.0.0 && bash scripts/bump-version.sh --audit` → Expected: 선언 파일 전부 6.0.0, audit에서 잔여 5.5.1 없음
+ 
+ - [ ] **Step 2: RELEASE-NOTES 추가.** 최상단에 6.0.0 항목: Output Contract 추가(출처 크레딧), 스킬 정리 3종(breaking — 명시적 호출자는 peer-review 사용), deprecated 커맨드 제거(major 약속 이행), 테스트 재배선.
+ 
+-- [ ] **Step 3: 전체 검증.** Run: `bash tests/jstack-static/run.sh && bash tests/shell-lint/run.sh 2>/dev/null; bash hooks/session-start | python3 -m json.tool > /dev/null && echo INJECTION-OK` → Expected: PASS + INJECTION-OK
++- [ ] **Step 3: 전체 검증 (실패 마스킹 금지 — `&&` 체인만 사용).**
++
++```bash
++bash tests/jstack-static/run.sh \
++  && bash hooks/session-start | python3 -m json.tool > /dev/null \
++  && bash hooks/session-start | grep -q "Output Contract" \
++  && echo INJECTION-OK
++```
++
++Expected: `[PASS]` + `INJECTION-OK`. 이어서 구버전 문자열 스캔 (bump-version --audit는 신버전 존재만 확인하므로 별도):
++
++```bash
++rg -n "5\.5\.1" package.json .claude-plugin .cursor-plugin gemini-extension.json hooks scripts skills commands tests 2>/dev/null
++```
++
++Expected: 출력 없음
+ 
+ - [ ] **Step 4: Commit.** `git commit -am "chore: release jstack 6.0.0 (JEP-495)"`
+ 
+ ---
+ 
+ ## 검증 요약 (스펙 게이트 매핑)
+ 
+ | 스펙 게이트 | 플랜 커버 |
+ |---|---|
+ | Iron Law (수정 전 실패 테스트) | 각 태스크 Step 1 RED 어서션 + Task 5 Step 4 pressure smoke |
+ | 테스트 갱신이 삭제와 같은 커밋 | Task 2·3 내 동시 수정 |
+ | session-start JSON + contract 포함 | Task 5 Step 3, Task 6 Step 3 |
+ | 상호 참조 0건 | Task 3 Step 4 |
+ | 6.0.0 범프 + RELEASE-NOTES | Task 6 |
+-| Codex skill discovery 확인 | 머지 후 finishing 단계에서 `ls ~/.codex/skills/jstack/using-jstack` + grep "Output Contract" (심링크라 머지 즉시 반영) |
++| 하네스별 전달 확인 (스펙 W2) | 머지 후 finishing 단계에서 전 하네스 확인: **Claude Code** `bash hooks/session-start` 주입에 contract 포함(Task 5·6에서 선검증) · **Codex** `grep -q "Output Contract" ~/.codex/skills/jstack/using-jstack/SKILL.md` (심링크라 머지 즉시 반영) · **Gemini** `gemini-extension.json` 버전 6.0.0 + GEMINI.md의 스킬 로드 경로가 skills/ 유지 확인 · **OpenCode** `.opencode` 플러그인의 skills 디렉토리 참조가 삭제된 3개 스킬을 하드코딩하지 않음(`rg "requesting-code-review|receiving-code-review|dispatching-parallel-agents" .opencode/` 0건) |
+ 
+ ## JSTACK REVIEW REPORT
+ 
+ | Check | Reviewer | Runs | Status | Findings | Artifact |
+ |---|---|---:|---|---|---|
+ | Spec Review | codex | 1 | Pass (issues fixed) | BLOCKING 2 + HIGH 3 반영 | .jstack/artifacts/peer-review-codex-plan-20260720T090205Z.md |
+-| Plan Review | codex | 0 | Pending | - | - |
++| Plan Review | codex | 1 | Issues Found → 반영됨 | BLOCKING 3 (Iron Law probe 부재, 하네스 검증 누락, shell-lint 오참조) + HIGH 3 (트리거 미실행, 스캔 범위, audit 한계) — 전부 수용·플랜 반영 | .jstack/artifacts/peer-review-codex-plan2-*.md |
+ | Verification | Local tests | 0 | Pending | - | - |
+ 
+ ## Execution Handoff
+ 
+ Inline Execution (jstack:executing-plans) 권장 — 태스크 6개가 전부 같은 테스트 파일·프로즈 영역을 순차 수정하고, 개별 태스크가 2-10분 규모라 subagent 오버헤드가 구현 비용을 초과한다. 자율 진행 승인됨.
+AGENTS.md	EXISTS
+CLAUDE.md	EXISTS
+GEMINI.md	EXISTS
+README.md	EXISTS
+docs/README.codex.md	EXISTS
+package.json	EXISTS
+gemini-extension.json	EXISTS
+.claude-plugin/plugin.json	EXISTS
+.version-bump.json	EXISTS
+tests/skill-triggering/run-test.sh	EXISTS
+tests/skill-triggering/run-all.sh	EXISTS
+scripts/bump-version.sh	EXISTS
+hooks/session-start	EXISTS
+11:[Omitted long matching line]
+15:[Omitted long matching line]
+16:- **6.1.0 릴리스**: 워크스트림 3(token diet). 6.0.0의 행동 효과를 관찰한 뒤 별도 진행 — 행동 회귀 시 원인 이분탐색이 가능하도록 릴리스를 분리한다.
+24:## 워크스트림 1 — 스킬 정리 (6.0.0)
+28:3. **deprecated 커맨드 삭제**: `commands/brainstorm.md`, `commands/write-plan.md`, `commands/execute-plan.md` 삭제 (6.0.0 major이므로 "next major release 제거" 공표와 정합).
+32:## 워크스트림 2 — ADHD Output Contract (6.0.0)
+37:[Omitted long matching line]
+38:[Omitted long matching line]
+67:[Omitted long matching line]
+68:[Omitted long matching line]
+71:- 워크스트림별 커밋 분리, 6.0.0 / 6.1.0 버전 범프 + RELEASE-NOTES 갱신.
+80:| 행동 회귀 원인 추적 불가 | 6.0.0 / 6.1.0 릴리스 분리, 워크스트림별 커밋 |
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "nl -ba docs/jstack/specs/2026-07-20-adhd-integration-design.md | sed -n '1,120p' && nl -ba tests/skill-triggering/run-test.sh | sed -n '1,220p' && nl -ba tests/skill-triggering/run-all.sh | sed -n '1,180p' && nl -ba scripts/bump-version.sh | sed -n '1,260p' && printf '%s\\n' '--- version manifest ---' && nl -ba .version-bump.json && printf '%s\\n' '--- opencode ---' && rg -n \"skills|requesting-code-review|receiving-code-review|dispatching-parallel-agents\" .opencode 2>&1 || true" in /Users/kakao1/.codex/jstack/.claude/worktrees/jep-495-adhd-integration
+ succeeded in 0ms:
+     1	---
+     2	linear-issue: JEP-495
+     3	status: draft
+     4	---
+     5	
+     6	# i-have-adhd Output Contract 통합 + jstack 슬림화
+     7	
+     8	## 문제
+     9	
+    10	1. **출력 스타일이 사용자의 인지 패턴과 안 맞음.** 사용자는 ADHD가 있고(투약 중), 장황한 도입부·곁가지·마무리 인사가 섞인 출력은 핵심 행동을 묻히게 한다. [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd)(MIT)가 이 문제를 다루는 검증된 규칙 세트를 제공하지만, 매 메시지 skill 트리거 방식이라 적용이 불안정하고 사용자의 기존 패턴(Linear 상태관리, verdict-first, 한국어)과 통합돼 있지 않다.
+    11	2. **스킬 사용 실측과 구성이 불일치.** Claude Code 트랜스크립트 전수 검색 결과, 실제 Skill 툴 호출은 peer-review 8회 / brainstorming 2회 / project-management 1회 / using-git-worktrees 1회이고 **나머지 13개 스킬은 0회**다(Codex 세션은 로그 포맷상 호출 측정 불가 — 이 수치는 Claude Code 한정). 이는 (a) 중복·미사용 스킬이 목록 고정비만 차지하고 있으며, (b) 파이프라인 스킬의 트리거(description)가 약하다는 신호다.
+    12	
+    13	## 범위
+    14	
+    15	- **6.0.0 릴리스**: 워크스트림 1(스킬 정리) + 워크스트림 2(Output Contract). major인 이유: 스킬 디렉토리 삭제는 명시적 호출자에게 breaking이고, deprecated 커맨드들이 "next major release에 제거"를 공표한 상태라 minor 릴리스에서의 삭제는 semver 약속 위반이다.
+    16	- **6.1.0 릴리스**: 워크스트림 3(token diet). 6.0.0의 행동 효과를 관찰한 뒤 별도 진행 — 행동 회귀 시 원인 이분탐색이 가능하도록 릴리스를 분리한다.
+    17	
+    18	### Out of scope
+    19	
+    20	- **크로스 세션 재개 지원**(session-start에서 Linear In Progress 이슈 주입): ADHD 관점에서 세션 간 컨텍스트 단절이 더 큰 문제지만, 세션 시작 지연·네트워크 의존성·비Linear 프로젝트 노이즈 리스크로 이번에는 제외. 향후 별도 이슈로 검토.
+    21	- `architecture-deepening` 정리: 유지 결정.
+    22	- i-have-adhd 플러그인 자체 설치: 규칙 추출 방식으로 대체.
+    23	
+    24	## 워크스트림 1 — 스킬 정리 (6.0.0)
+    25	
+    26	1. **code-review 2종 정리**: `skills/requesting-code-review/`(66단어)는 **이미 peer-review로의 redirect 스텁**이므로 스텁을 삭제만 한다. `skills/receiving-code-review/`(882단어)는 핵심 규율(성과적 동의 금지, 기술적 검증 우선)을 `skills/peer-review/SKILL.md` 내 "리뷰 피드백 받기" 섹션으로 유실 없이 병합한 뒤 디렉토리를 삭제한다.
+    27	2. **dispatching-parallel-agents 아카이브**: `skills/` 밖의 `archive/skills/dispatching-parallel-agents/`로 이동해 스킬 목록에서 제외한다. 네이티브 Agent/Workflow 툴과 기능 중복. 삭제가 아니므로 복원 가능.
+    28	3. **deprecated 커맨드 삭제**: `commands/brainstorm.md`, `commands/write-plan.md`, `commands/execute-plan.md` 삭제 (6.0.0 major이므로 "next major release 제거" 공표와 정합).
+    29	4. **테스트 갱신 (삭제와 같은 커밋)**: `tests/jstack-static/run.sh`의 requesting-code-review grep 어서션 제거·대체, `tests/skill-triggering/run-all.sh`의 SKILLS 배열에서 dispatching-parallel-agents·requesting-code-review 제거 및 해당 prompts 정리. peer-review 병합 콘텐츠에 대한 static 어서션을 추가한다.
+    30	5. **상호 참조 갱신**: `rg "requesting-code-review|receiving-code-review|dispatching-parallel-agents" skills/ commands/ hooks/ docs/ tests/ *.md`로 전수 검색해 남은 참조를 peer-review 또는 네이티브 툴 언급으로 교체한다. 사용자 전역 설정(`~/.claude/CLAUDE.md`, rules/)의 참조는 이 repo 밖이므로 변경 사항을 사용자에게 보고만 한다.
+    31	
+    32	## 워크스트림 2 — ADHD Output Contract (6.0.0)
+    33	
+    34	`skills/using-jstack/SKILL.md` 하단에 **"Output Contract"** 섹션(~150단어, 영문)을 추가한다. 출처 크레딧: `<!-- Adapted from ayghri/i-have-adhd (MIT) -->`.
+    35	
+    36	**하네스별 전달 경로** (경로마다 검증 필요):
+    37	- **Claude Code**: session-start 훅이 파일 전문을 주입 (matcher: `startup|clear|compact` — 세션 시작뿐 아니라 clear/compact 시 재주입되므로 컨텍스트 요약 후에도 유지됨).
+    38	- **Codex / Gemini / OpenCode**: 훅이 아니라 각 하네스의 native skill discovery로 using-jstack 스킬이 로드될 때 적용된다. 즉 이 하네스들에서는 using-jstack이 활성화된 세션에서만 contract가 유효하다.
+    39	
+    40	### 적용 범위 (핵심 제약)
+    41	
+    42	Contract는 **대화형/상태 출력에만 적용**된다. 다음 아티팩트에는 적용하지 않는다고 명시한다: 스펙, 플랜, 문서, 커밋 메시지, 코드 주석, 리뷰 리포트. 이들은 소속 스킬(brainstorming, writing-plans 등)의 상세성 요구를 따른다.
+    43	
+    44	### 규칙 (원본 10규칙의 조정본)
+    45	
+    46	1. 결론/행동부터 시작 — 도입부·배경 설명 선행 금지 (기존 peer-review verdict-first와 일치).
+    47	2. 다단계 작업은 번호 매기기, 리스트는 5개 이하.
+    48	3. **다단계 작업 진행 중인 턴**의 끝에 "지금 위치 → 다음 단계" 1-2줄. Linear 연동 작업이면 이슈 ID 포함. 짧은 Q&A 턴에는 적용하지 않는다.
+    49	4. 곁가지 억제 — 요청받지 않은 부수 주제는 한 줄 언급 이하로.
+    50	5. 시간 추정 대신 규모 감각(S/M/L)과 다음 확인 지점 제시.
+    51	6. 오류·실패 시 담담한 어조, 자책·사과 반복 금지.
+    52	7. 마무리 인사·"도움이 되길 바랍니다"류 제거.
+    53	
+    54	### 예외 (원본의 예외 조항 유지 — 필수)
+    55	
+    56	사용자가 설명을 요청할 때, 모호성이 있어 질문이 필요할 때, 파괴적 행동 전 확인이 필요할 때는 규칙보다 해당 상황의 요구가 우선한다.
+    57	
+    58	## 워크스트림 3 — Token diet (6.1.0, 별도 릴리스)
+    59	
+    60	1. **description 재작성 — 목표는 축약이 아니라 트리거 품질.** 실측상 파이프라인 스킬 호출이 0회이므로, 남는 15개 스킬의 frontmatter description을 트리거 시나리오 기준으로 재작성한다. 짧아지는 것은 부산물이며, 트리거가 약한 스킬(writing-plans, verification-before-completion 등)은 오히려 트리거 문구가 늘 수 있다. `jstack:writing-skills`의 트리거 테스트 절차로 before/after 검증.
+    61	2. **brainstorming(4.8k 단어) core/references 분리.** 실호출 이력이 있고 세션 내 체류가 긴 유일한 대형 스킬. 분리 원칙: **행동 조형 콘텐츠(HARD-GATE, 체크리스트, 프로세스 플로우, 안티패턴)는 core에 유지**하고, 사례·템플릿·부록(visual-companion 상세 등)만 `references/`로 이동. superpowers의 "스킬은 행동 코드" 원칙에 따라 규율 콘텐츠를 optional read로 만들지 않는다.
+    62	3. systematic-debugging(5.2k) 분리는 선택 — brainstorming 분리 결과가 좋을 때만. writing-skills(11.7k)와 subagent-driven-development(5.4k)는 이번에 분리하지 않는다(호출 빈도 대비 효과 낮음, writing-skills는 본 작업의 거버넌스 문서).
+    63	4. 각 스킬 수정 후 `jstack:peer-review` 게이트 통과를 검증 조건으로 한다.
+    64	
+    65	## 검증
+    66	
+    67	- **writing-skills Iron Law 준수 (전 워크스트림)**: 스킬 콘텐츠(peer-review, using-jstack 포함)를 수정하는 모든 변경은 `jstack:writing-skills`의 절차를 따른다 — 수정 전 실패하는 pressure 시나리오를 먼저 정의하고, 수정 후 해당 시나리오 재실행으로 통과를 확인한다. W3만이 아니라 W1의 peer-review 병합, W2의 using-jstack 수정에도 적용.
+    68	- `bash hooks/session-start` 실행 → 출력 JSON이 유효하고 Output Contract 섹션이 포함되는지 확인 (`python3 -m json.tool`로 파싱). Codex 경로는 `~/.codex/` 심링크 기준 skill discovery로 using-jstack 로드를 별도 확인.
+    69	- `tests/` 통과 — 단, W1의 테스트 갱신(항목 4)이 같은 커밋에 포함된 상태에서.
+    70	- 상호 참조 전수 검색 결과 0건 (워크스트림 1의 삭제 대상 참조).
+    71	- 워크스트림별 커밋 분리, 6.0.0 / 6.1.0 버전 범프 + RELEASE-NOTES 갱신.
+    72	
+    73	## 리스크와 완화
+    74	
+    75	| 리스크 | 완화 |
+    76	|---|---|
+    77	| Contract가 스펙/플랜 상세성과 충돌 | 적용 범위를 대화형 출력으로 한정 + 예외 조항 명시 |
+    78	| description 재작성이 트리거를 더 약화 | 축약이 아닌 트리거 품질을 목표로, writing-skills 절차로 검증 |
+    79	| core/references 분리로 규율 콘텐츠가 안 읽힘 | 행동 조형 콘텐츠는 core 유지 원칙 명문화 |
+    80	| 행동 회귀 원인 추적 불가 | 6.0.0 / 6.1.0 릴리스 분리, 워크스트림별 커밋 |
+    81	
+    82	## JSTACK REVIEW REPORT
+    83	
+    84	| Check | Reviewer | Runs | Status | Findings | Artifact |
+    85	|---|---|---:|---|---|---|
+    86	| Self-review | claude | 1 | Pass | - | - |
+    87	| Peer Review | codex | 1 | Issues Found → 반영됨 | BLOCKING 2 (Iron Law 검증 누락, 테스트 참조 깨짐) + HIGH 3 (하네스 전달 경로, 스텁 삭제, semver) — 4건 수용·1건 부분 수용, 전부 스펙 반영 | .jstack/artifacts/peer-review-codex-plan-20260720T090205Z.md |
+     1	#!/usr/bin/env bash
+     2	# Test skill triggering with naive prompts
+     3	# Usage: ./run-test.sh <skill-name> <prompt-file>
+     4	#
+     5	# Tests whether Claude triggers a skill based on a natural prompt
+     6	# (without explicitly mentioning the skill)
+     7	
+     8	set -e
+     9	
+    10	SKILL_NAME="$1"
+    11	PROMPT_FILE="$2"
+    12	MAX_TURNS="${3:-3}"
+    13	
+    14	if [ -z "$SKILL_NAME" ] || [ -z "$PROMPT_FILE" ]; then
+    15	    echo "Usage: $0 <skill-name> <prompt-file> [max-turns]"
+    16	    echo "Example: $0 systematic-debugging ./test-prompts/debugging.txt"
+    17	    exit 1
+    18	fi
+    19	
+    20	# Get the directory where this script lives (should be tests/skill-triggering)
+    21	SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    22	# Get the superpowers plugin root (two levels up from tests/skill-triggering)
+    23	PLUGIN_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+    24	
+    25	TIMESTAMP=$(date +%s)
+    26	OUTPUT_DIR="/tmp/superpowers-tests/${TIMESTAMP}/skill-triggering/${SKILL_NAME}"
+    27	mkdir -p "$OUTPUT_DIR"
+    28	
+    29	# Read prompt from file
+    30	PROMPT=$(cat "$PROMPT_FILE")
+    31	
+    32	echo "=== Skill Triggering Test ==="
+    33	echo "Skill: $SKILL_NAME"
+    34	echo "Prompt file: $PROMPT_FILE"
+    35	echo "Max turns: $MAX_TURNS"
+    36	echo "Output dir: $OUTPUT_DIR"
+    37	echo ""
+    38	
+    39	# Copy prompt for reference
+    40	cp "$PROMPT_FILE" "$OUTPUT_DIR/prompt.txt"
+    41	
+    42	# Run Claude
+    43	LOG_FILE="$OUTPUT_DIR/claude-output.json"
+    44	cd "$OUTPUT_DIR"
+    45	
+    46	echo "Plugin dir: $PLUGIN_DIR"
+    47	echo "Running claude -p with naive prompt..."
+    48	timeout 300 claude -p "$PROMPT" \
+    49	    --plugin-dir "$PLUGIN_DIR" \
+    50	    --dangerously-skip-permissions \
+    51	    --max-turns "$MAX_TURNS" \
+    52	    --output-format stream-json \
+    53	    > "$LOG_FILE" 2>&1 || true
+    54	
+    55	echo ""
+    56	echo "=== Results ==="
+    57	
+    58	# Check if skill was triggered (look for Skill tool invocation)
+    59	# In stream-json, tool invocations have "name":"Skill" (not "tool":"Skill")
+    60	# Match either "skill":"skillname" or "skill":"namespace:skillname"
+    61	SKILL_PATTERN='"skill":"([^"]*:)?'"${SKILL_NAME}"'"'
+    62	if grep -q '"name":"Skill"' "$LOG_FILE" && grep -qE "$SKILL_PATTERN" "$LOG_FILE"; then
+    63	    echo "✅ PASS: Skill '$SKILL_NAME' was triggered"
+    64	    TRIGGERED=true
+    65	else
+    66	    echo "❌ FAIL: Skill '$SKILL_NAME' was NOT triggered"
+    67	    TRIGGERED=false
+    68	fi
+    69	
+    70	# Show what skills WERE triggered
+    71	echo ""
+    72	echo "Skills triggered in this run:"
+    73	grep -o '"skill":"[^"]*"' "$LOG_FILE" 2>/dev/null | sort -u || echo "  (none)"
+    74	
+    75	# Show first assistant message
+    76	echo ""
+    77	echo "First assistant response (truncated):"
+    78	grep '"type":"assistant"' "$LOG_FILE" | head -1 | jq -r '.message.content[0].text // .message.content' 2>/dev/null | head -c 500 || echo "  (could not extract)"
+    79	
+    80	echo ""
+    81	echo "Full log: $LOG_FILE"
+    82	echo "Timestamp: $TIMESTAMP"
+    83	
+    84	if [ "$TRIGGERED" = "true" ]; then
+    85	    exit 0
+    86	else
+    87	    exit 1
+    88	fi
+     1	#!/usr/bin/env bash
+     2	# Run all skill triggering tests
+     3	# Usage: ./run-all.sh
+     4	
+     5	set -e
+     6	
+     7	SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+     8	PROMPTS_DIR="$SCRIPT_DIR/prompts"
+     9	
+    10	SKILLS=(
+    11	    "systematic-debugging"
+    12	    "test-driven-development"
+    13	    "writing-plans"
+    14	    "dispatching-parallel-agents"
+    15	    "executing-plans"
+    16	    "requesting-code-review"
+    17	)
+    18	
+    19	echo "=== Running Skill Triggering Tests ==="
+    20	echo ""
+    21	
+    22	PASSED=0
+    23	FAILED=0
+    24	RESULTS=()
+    25	
+    26	for skill in "${SKILLS[@]}"; do
+    27	    prompt_file="$PROMPTS_DIR/${skill}.txt"
+    28	
+    29	    if [ ! -f "$prompt_file" ]; then
+    30	        echo "⚠️  SKIP: No prompt file for $skill"
+    31	        continue
+    32	    fi
+    33	
+    34	    echo "Testing: $skill"
+    35	
+    36	    if "$SCRIPT_DIR/run-test.sh" "$skill" "$prompt_file" 3 2>&1 | tee /tmp/skill-test-$skill.log; then
+    37	        PASSED=$((PASSED + 1))
+    38	        RESULTS+=("✅ $skill")
+    39	    else
+    40	        FAILED=$((FAILED + 1))
+    41	        RESULTS+=("❌ $skill")
+    42	    fi
+    43	
+    44	    echo ""
+    45	    echo "---"
+    46	    echo ""
+    47	done
+    48	
+    49	echo ""
+    50	echo "=== Summary ==="
+    51	for result in "${RESULTS[@]}"; do
+    52	    echo "  $result"
+    53	done
+    54	echo ""
+    55	echo "Passed: $PASSED"
+    56	echo "Failed: $FAILED"
+    57	
+    58	if [ $FAILED -gt 0 ]; then
+    59	    exit 1
+    60	fi
+     1	#!/usr/bin/env bash
+     2	#
+     3	# bump-version.sh — bump version numbers across all declared files,
+     4	# with drift detection and repo-wide audit for missed files.
+     5	#
+     6	# Usage:
+     7	#   bump-version.sh <new-version>   Bump all declared files to new version
+     8	#   bump-version.sh --check         Report current versions (detect drift)
+     9	#   bump-version.sh --audit         Check + grep repo for old version strings
+    10	#
+    11	set -euo pipefail
+    12	
+    13	SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    14	REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+    15	CONFIG="$REPO_ROOT/.version-bump.json"
+    16	
+    17	if [[ ! -f "$CONFIG" ]]; then
+    18	  echo "error: .version-bump.json not found at $CONFIG" >&2
+    19	  exit 1
+    20	fi
+    21	
+    22	# --- helpers ---
+    23	
+    24	# Read a dotted field path from a JSON file.
+    25	# Handles both simple ("version") and nested ("plugins.0.version") paths.
+    26	read_json_field() {
+    27	  local file="$1" field="$2"
+    28	  # Convert dot-path to jq path: "plugins.0.version" -> .plugins[0].version
+    29	  local jq_path
+    30	  jq_path=$(echo "$field" | sed -E 's/\.([0-9]+)/[\1]/g' | sed 's/^/./' | sed 's/\.\././g')
+    31	  jq -r "$jq_path" "$file"
+    32	}
+    33	
+    34	# Write a dotted field path in a JSON file, preserving formatting.
+    35	write_json_field() {
+    36	  local file="$1" field="$2" value="$3"
+    37	  local jq_path
+    38	  jq_path=$(echo "$field" | sed -E 's/\.([0-9]+)/[\1]/g' | sed 's/^/./' | sed 's/\.\././g')
+    39	  local tmp="${file}.tmp"
+    40	  jq "$jq_path = \"$value\"" "$file" > "$tmp" && mv "$tmp" "$file"
+    41	}
+    42	
+    43	# Read the list of declared files from config.
+    44	# Outputs lines of "path<TAB>field"
+    45	declared_files() {
+    46	  jq -r '.files[] | "\(.path)\t\(.field)"' "$CONFIG"
+    47	}
+    48	
+    49	# Read the audit exclude patterns from config.
+    50	audit_excludes() {
+    51	  jq -r '.audit.exclude[]' "$CONFIG" 2>/dev/null
+    52	}
+    53	
+    54	# --- commands ---
+    55	
+    56	cmd_check() {
+    57	  local has_drift=0
+    58	  local versions=()
+    59	
+    60	  echo "Version check:"
+    61	  echo ""
+    62	
+    63	  while IFS=$'\t' read -r path field; do
+    64	    local fullpath="$REPO_ROOT/$path"
+    65	    if [[ ! -f "$fullpath" ]]; then
+    66	      printf "  %-45s  MISSING\n" "$path ($field)"
+    67	      has_drift=1
+    68	      continue
+    69	    fi
+    70	    local ver
+    71	    ver=$(read_json_field "$fullpath" "$field")
+    72	    printf "  %-45s  %s\n" "$path ($field)" "$ver"
+    73	    versions+=("$ver")
+    74	  done < <(declared_files)
+    75	
+    76	  echo ""
+    77	
+    78	  # Check if all versions match
+    79	  local unique
+    80	  unique=$(printf '%s\n' "${versions[@]}" | sort -u | wc -l | tr -d ' ')
+    81	  if [[ "$unique" -gt 1 ]]; then
+    82	    echo "DRIFT DETECTED — versions are not in sync:"
+    83	    printf '%s\n' "${versions[@]}" | sort | uniq -c | sort -rn | while read -r count ver; do
+    84	      echo "  $ver ($count files)"
+    85	    done
+    86	    has_drift=1
+    87	  else
+    88	    echo "All declared files are in sync at ${versions[0]}"
+    89	  fi
+    90	
+    91	  return $has_drift
+    92	}
+    93	
+    94	cmd_audit() {
+    95	  # First run check
+    96	  cmd_check || true
+    97	  echo ""
+    98	
+    99	  # Determine the current version (most common across declared files)
+   100	  local current_version
+   101	  current_version=$(
+   102	    while IFS=$'\t' read -r path field; do
+   103	      local fullpath="$REPO_ROOT/$path"
+   104	      [[ -f "$fullpath" ]] && read_json_field "$fullpath" "$field"
+   105	    done < <(declared_files) | sort | uniq -c | sort -rn | head -1 | awk '{print $2}'
+   106	  )
+   107	
+   108	  if [[ -z "$current_version" ]]; then
+   109	    echo "error: could not determine current version" >&2
+   110	    return 1
+   111	  fi
+   112	
+   113	  echo "Audit: scanning repo for version string '$current_version'..."
+   114	  echo ""
+   115	
+   116	  # Build grep exclude args
+   117	  local -a exclude_args=()
+   118	  while IFS= read -r pattern; do
+   119	    exclude_args+=("--exclude=$pattern" "--exclude-dir=$pattern")
+   120	  done < <(audit_excludes)
+   121	
+   122	  # Also always exclude binary files and .git
+   123	  exclude_args+=("--exclude-dir=.git" "--exclude-dir=node_modules" "--binary-files=without-match")
+   124	
+   125	  # Get list of declared paths for comparison
+   126	  local -a declared_paths=()
+   127	  while IFS=$'\t' read -r path _field; do
+   128	    declared_paths+=("$path")
+   129	  done < <(declared_files)
+   130	
+   131	  # Grep for the version string
+   132	  local found_undeclared=0
+   133	  while IFS= read -r match; do
+   134	    local match_file
+   135	    match_file=$(echo "$match" | cut -d: -f1)
+   136	    # Make path relative to repo root
+   137	    local rel_path="${match_file#$REPO_ROOT/}"
+   138	
+   139	    # Check if this file is in the declared list
+   140	    local is_declared=0
+   141	    for dp in "${declared_paths[@]}"; do
+   142	      if [[ "$rel_path" == "$dp" ]]; then
+   143	        is_declared=1
+   144	        break
+   145	      fi
+   146	    done
+   147	
+   148	    if [[ "$is_declared" -eq 0 ]]; then
+   149	      if [[ "$found_undeclared" -eq 0 ]]; then
+   150	        echo "UNDECLARED files containing '$current_version':"
+   151	        found_undeclared=1
+   152	      fi
+   153	      echo "  $match"
+   154	    fi
+   155	  done < <(grep -rn "${exclude_args[@]}" -F "$current_version" "$REPO_ROOT" 2>/dev/null || true)
+   156	
+   157	  if [[ "$found_undeclared" -eq 0 ]]; then
+   158	    echo "No undeclared files contain the version string. All clear."
+   159	  else
+   160	    echo ""
+   161	    echo "Review the above files — if they should be bumped, add them to .version-bump.json"
+   162	    echo "If they should be skipped, add them to the audit.exclude list."
+   163	  fi
+   164	}
+   165	
+   166	cmd_bump() {
+   167	  local new_version="$1"
+   168	
+   169	  # Validate semver-ish format
+   170	  if ! echo "$new_version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+   171	    echo "error: '$new_version' doesn't look like a version (expected X.Y.Z)" >&2
+   172	    exit 1
+   173	  fi
+   174	
+   175	  echo "Bumping all declared files to $new_version..."
+   176	  echo ""
+   177	
+   178	  while IFS=$'\t' read -r path field; do
+   179	    local fullpath="$REPO_ROOT/$path"
+   180	    if [[ ! -f "$fullpath" ]]; then
+   181	      echo "  SKIP (missing): $path"
+   182	      continue
+   183	    fi
+   184	    local old_ver
+   185	    old_ver=$(read_json_field "$fullpath" "$field")
+   186	    write_json_field "$fullpath" "$field" "$new_version"
+   187	    printf "  %-45s  %s -> %s\n" "$path ($field)" "$old_ver" "$new_version"
+   188	  done < <(declared_files)
+   189	
+   190	  echo ""
+   191	  echo "Done. Running audit to check for missed files..."
+   192	  echo ""
+   193	  cmd_audit
+   194	}
+   195	
+   196	# --- main ---
+   197	
+   198	case "${1:-}" in
+   199	  --check)
+   200	    cmd_check
+   201	    ;;
+   202	  --audit)
+   203	    cmd_audit
+   204	    ;;
+   205	  --help|-h|"")
+   206	    echo "Usage: bump-version.sh <new-version> | --check | --audit"
+   207	    echo ""
+   208	    echo "  <new-version>  Bump all declared files to the given version"
+   209	    echo "  --check        Show current versions, detect drift"
+   210	    echo "  --audit        Check + scan repo for undeclared version references"
+   211	    exit 0
+   212	    ;;
+   213	  --*)
+   214	    echo "error: unknown flag '$1'" >&2
+   215	    exit 1
+   216	    ;;
+   217	  *)
+   218	    cmd_bump "$1"
+   219	    ;;
+   220	esac
+--- version manifest ---
+     1	{
+     2	  "files": [
+     3	    { "path": "package.json", "field": "version" },
+     4	    { "path": ".claude-plugin/plugin.json", "field": "version" },
+     5	    { "path": ".cursor-plugin/plugin.json", "field": "version" },
+     6	    { "path": ".claude-plugin/marketplace.json", "field": "metadata.version" },
+     7	    { "path": ".claude-plugin/marketplace.json", "field": "plugins.0.version" },
+     8	    { "path": "gemini-extension.json", "field": "version" }
+     9	  ],
+    10	  "audit": {
+    11	    "exclude": [
+    12	      "CHANGELOG.md",
+    13	      "RELEASE-NOTES.md",
+    14	      "node_modules",
+    15	      ".git",
+    16	      ".version-bump.json",
+    17	      "scripts/bump-version.sh"
+    18	    ]
+    19	  }
+    20	}
+--- opencode ---
+.opencode/INSTALL.md:17:Restart OpenCode. That's it — the plugin auto-installs and registers all skills.
+.opencode/INSTALL.md:28:rm -rf ~/.config/opencode/skills/superpowers
+.opencode/INSTALL.md:33:# Remove skills.paths from opencode.json if you added one for superpowers
+.opencode/INSTALL.md:43:use skill tool to list skills
+.opencode/INSTALL.md:67:### Skills not found
+.opencode/INSTALL.md:74:When skills reference Claude Code tools:
+.opencode/plugins/superpowers.js:5: * Auto-registers skills directory via config hook (no symlinks needed).
+.opencode/plugins/superpowers.js:15:// Simple frontmatter extraction (avoid dependency on skills-core for bootstrap)
+.opencode/plugins/superpowers.js:51:  const jstackSkillsDir = path.resolve(__dirname, '../../skills');
+.opencode/plugins/superpowers.js:58:    const skillPath = path.join(jstackSkillsDir, 'using-jstack', 'SKILL.md');
+.opencode/plugins/superpowers.js:65:When skills reference tools you don't have, substitute OpenCode equivalents:
+.opencode/plugins/superpowers.js:71:Use OpenCode's native \`skill\` tool to list and load skills.`;
+.opencode/plugins/superpowers.js:85:    // Inject skills path into live config so OpenCode discovers JStack skills
+.opencode/plugins/superpowers.js:88:    // here are visible when skills are lazily discovered later.
+.opencode/plugins/superpowers.js:90:      config.skills = config.skills || {};
+.opencode/plugins/superpowers.js:91:      config.skills.paths = config.skills.paths || [];
+.opencode/plugins/superpowers.js:92:      if (!config.skills.paths.includes(jstackSkillsDir)) {
+.opencode/plugins/superpowers.js:93:        config.skills.paths.push(jstackSkillsDir);
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "rg -n \"5\\.5\\.1\" --glob '"'!.git/**'"' --glob '"'!node_modules/**'"' . || true && printf '%s\\n' '--- deleted-skill live refs under proposed scan inputs ---' && rg -ln \"requesting-code-review|receiving-code-review|dispatching-parallel-agents\" skills/ commands/ hooks/ tests/ docs/ README.md AGENTS.md CLAUDE.md GEMINI.md --glob '"'!docs/plans/**'"' --glob '"'!docs/superpowers/**'"' --glob '"'!docs/jstack/plans/**'"' --glob '"'!docs/jstack/specs/**'"' 2>/dev/null || true && printf '%s\\n' '--- root markdown inventory ---' && rg --files -g '*.md' -g '"'!docs/plans/**'"' -g '"'!docs/superpowers/**'"' -g '"'!docs/jstack/plans/**'"' -g '"'!docs/jstack/specs/**'"' | sed -n '1,160p'" in /Users/kakao1/.codex/jstack/.claude/worktrees/jep-495-adhd-integration
+ succeeded in 0ms:
+./gemini-extension.json:4:  "version": "5.5.1",
+./.cursor-plugin/plugin.json:5:  "version": "5.5.1",
+./.jstack/artifacts/peer-review-codex-plan2-20260720T091359Z.raw:729:   215	- [ ] **Step 1: 버전 범프.** Run: `bash scripts/bump-version.sh 6.0.0 && bash scripts/bump-version.sh --audit` → Expected: 선언 파일 전부 6.0.0, audit에서 잔여 5.5.1 없음
+./.jstack/artifacts/peer-review-codex-plan2-20260720T091359Z.raw:2355:     4	  "version": "5.5.1",
+./.jstack/artifacts/peer-review-codex-plan2-20260720T091359Z.raw:2794:gemini-extension.json:4:  "version": "5.5.1",
+./.jstack/artifacts/peer-review-codex-plan2-20260720T091359Z.raw:2795:package.json:3:  "version": "5.5.1",
+./.jstack/artifacts/peer-review-codex-plan2-20260720T091359Z.raw:2796:.cursor-plugin/plugin.json:5:  "version": "5.5.1",
+./.jstack/artifacts/peer-review-codex-plan2-20260720T091359Z.raw:2797:.claude-plugin/plugin.json:4:  "version": "5.5.1",
+./.jstack/artifacts/peer-review-codex-plan2-20260720T091359Z.raw:2798:.claude-plugin/marketplace.json:8:    "version": "5.5.1"
+./.jstack/artifacts/peer-review-codex-plan2-20260720T091359Z.raw:2799:.claude-plugin/marketplace.json:14:      "version": "5.5.1",
+./.jstack/artifacts/peer-review-codex-plan2-20260720T091359Z.raw:2840:[Omitted long matching line]
+./.jstack/artifacts/peer-review-codex-plan2-20260720T091359Z.raw:2852:[Omitted long matching line]
+./package.json:3:  "version": "5.5.1",
+./.jstack/artifacts/peer-review-codex-plan2-20260720T091359Z.md:16:- HIGH plan:215 — bump-version --audit checks new version, not stale 5.5.1
+./.jstack/artifacts/peer-review-codex-plan2-20260720T091359Z.md:25:  6. Task 6에 구버전(5.5.1) 문자열 스캔 별도 추가.
+./.jstack/artifacts/peer-review-codex-plan-20260720T090205Z.raw:830:     4	  "version": "5.5.1",
+./.jstack/artifacts/peer-review-codex-plan-20260720T090205Z.raw:851:     5	  "version": "5.5.1",
+./.jstack/artifacts/peer-review-codex-plan-20260720T090205Z.raw:874:     4	  "version": "5.5.1",
+./.jstack/artifacts/peer-review-codex-plan-20260720T090205Z.raw:2674:     3	  "version": "5.5.1",
+./.jstack/artifacts/peer-review-codex-plan-20260720T090205Z.raw:2686:     8	    "version": "5.5.1"
+./.jstack/artifacts/peer-review-codex-plan-20260720T090205Z.raw:2692:    14	      "version": "5.5.1",
+./.claude-plugin/plugin.json:4:  "version": "5.5.1",
+./.claude-plugin/marketplace.json:8:    "version": "5.5.1"
+./.claude-plugin/marketplace.json:14:      "version": "5.5.1",
+./.jstack/artifacts/peer-review-codex-plan3-20260720T092007Z.raw:428:[Omitted long matching line]
+./.jstack/artifacts/peer-review-codex-plan3-20260720T092007Z.raw:706:   246	- [ ] **Step 1: 버전 범프.** Run: `bash scripts/bump-version.sh 6.0.0 && bash scripts/bump-version.sh --audit` → Expected: 선언 파일 전부 6.0.0, audit에서 잔여 5.5.1 없음
+./.jstack/artifacts/peer-review-codex-plan3-20260720T092007Z.raw:1045: - [ ] **Step 1: 버전 범프.** Run: `bash scripts/bump-version.sh 6.0.0 && bash scripts/bump-version.sh --audit` → Expected: 선언 파일 전부 6.0.0, audit에서 잔여 5.5.1 없음
+./docs/jstack/plans/2026-07-20-adhd-integration-6.0.0.md:246:- [ ] **Step 1: 버전 범프.** Run: `bash scripts/bump-version.sh 6.0.0 && bash scripts/bump-version.sh --audit` → Expected: 선언 파일 전부 6.0.0, audit에서 잔여 5.5.1 없음
+--- deleted-skill live refs under proposed scan inputs ---
+README.md
+tests/jstack-static/run.sh
+docs/README.codex.md
+skills/subagent-driven-development/SKILL.md
+skills/dispatching-parallel-agents/SKILL.md
+tests/skill-triggering/run-all.sh
+skills/using-jstack/references/gemini-tools.md
+skills/receiving-code-review/SKILL.md
+skills/using-jstack/references/codex-tools.md
+skills/requesting-code-review/SKILL.md
+--- root markdown inventory ---
+CLAUDE.md
+skills/peer-review/SKILL.md
+skills/subagent-driven-development/code-quality-reviewer-prompt.md
+skills/subagent-driven-development/SKILL.md
+skills/subagent-driven-development/implementer-prompt.md
+skills/subagent-driven-development/spec-reviewer-prompt.md
+skills/subagent-driven-development/code-reviewer.md
+skills/verification-before-completion/SKILL.md
+skills/writing-skills/SKILL.md
+skills/writing-skills/persuasion-principles.md
+skills/writing-skills/examples/CLAUDE_MD_TESTING.md
+skills/writing-skills/anthropic-best-practices.md
+skills/writing-skills/testing-skills-with-subagents.md
+skills/receiving-code-review/SKILL.md
+skills/requesting-code-review/SKILL.md
+skills/writing-plans/SKILL.md
+skills/writing-plans/agent-brief-template.md
+skills/writing-plans/plan-document-reviewer-prompt.md
+skills/brainstorming/adr-format.md
+skills/brainstorming/context-format.md
+skills/brainstorming/spec-document-reviewer-prompt.md
+skills/brainstorming/SKILL.md
+skills/brainstorming/visual-companion.md
+skills/finishing-a-development-branch/SKILL.md
+skills/executing-plans/SKILL.md
+skills/architecture-deepening/interface-design.md
+skills/architecture-deepening/deepening.md
+skills/architecture-deepening/SKILL.md
+skills/architecture-deepening/language.md
+skills/simplest-thing/SKILL.md
+skills/project-management/SKILL.md
+skills/dispatching-parallel-agents/SKILL.md
+skills/using-jstack/SKILL.md
+skills/using-jstack/references/gemini-tools.md
+skills/using-jstack/references/codex-tools.md
+skills/using-jstack/references/copilot-tools.md
+skills/systematic-debugging/root-cause-tracing.md
+skills/systematic-debugging/test-pressure-3.md
+skills/systematic-debugging/SKILL.md
+skills/systematic-debugging/defense-in-depth.md
+skills/systematic-debugging/test-academic.md
+skills/systematic-debugging/CREATION-LOG.md
+skills/systematic-debugging/test-pressure-2.md
+skills/systematic-debugging/condition-based-waiting.md
+skills/systematic-debugging/test-pressure-1.md
+skills/test-driven-development/testing-anti-patterns.md
+skills/test-driven-development/SKILL.md
+skills/using-git-worktrees/SKILL.md
+commands/brainstorm.md
+commands/write-plan.md
+commands/execute-plan.md
+GEMINI.md
+.github/ISSUE_TEMPLATE/platform_support.md
+.github/ISSUE_TEMPLATE/bug_report.md
+.github/ISSUE_TEMPLATE/feature_request.md
+.github/PULL_REQUEST_TEMPLATE.md
+.codex/INSTALL.md
+README.md
+.jstack/artifacts/peer-review-codex-plan-20260701T225300Z.md
+.jstack/artifacts/simplest-thing-verification/scenarios.md
+.jstack/artifacts/simplest-thing-verification/red-baseline.md
+.jstack/artifacts/simplest-thing-verification/green-and-pressure.md
+.jstack/artifacts/peer-review-codex-plan-20260720T090205Z.md
+.jstack/artifacts/peer-review-codex-plan-20260702T001500Z.md
+.jstack/artifacts/peer-review-codex-plan-20260528T222650Z.md
+.jstack/artifacts/linear-pm-verification/baseline.md
+.jstack/artifacts/linear-pm-verification/green-and-pressure.md
+.jstack/artifacts/peer-review-codex-plan2-20260720T091359Z.md
+.jstack/artifacts/peer-review-codex-plan-20260613T012500Z.md
+.jstack/artifacts/peer-review-codex-plan-20260613T005900Z.md
+docs/windows/polyglot-hooks.md
+docs/README.opencode.md
+docs/testing.md
+docs/README.codex.md
+RELEASE-NOTES.md
+CODE_OF_CONDUCT.md
+.opencode/INSTALL.md
+tests/subagent-driven-dev/svelte-todo/plan.md
+tests/subagent-driven-dev/svelte-todo/design.md
+tests/claude-code/README.md
+tests/subagent-driven-dev/go-fractals/design.md
+tests/subagent-driven-dev/go-fractals/plan.md
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "nl -ba .jstack/artifacts/peer-review-codex-plan2-20260720T091359Z.md | sed -n '1,120p' && rg -n -C 3 \"pre-edit|하네스|harness|shell-lint|exit|trigger|잔여|audit|version|BLOCKING|HIGH\" .jstack/artifacts/peer-review-codex-plan2-20260720T091359Z.raw | tail -n 260" in /Users/kakao1/.codex/jstack/.claude/worktrees/jep-495-adhd-integration
+ succeeded in 0ms:
+     1	# Peer Review: plan (implementation plan)
+     2	
+     3	## Reviewer
+     4	codex (gpt-5.6-sol, reasoning=high)
+     5	
+     6	## Prompt
+     7	Plan review of docs/jstack/plans/2026-07-20-adhd-integration-6.0.0.md against spec. Raw transcript in same-stamp .raw file.
+     8	
+     9	## Raw Output
+    10	BLOCKING
+    11	- BLOCKING plan:29,200 — Tasks 1/5 lack pre-edit behavioral pressure runs (Iron Law)
+    12	- BLOCKING plan:198,234 — per-harness verification omits Gemini/OpenCode, defers Codex
+    13	- BLOCKING plan:219 — nonexistent tests/shell-lint/run.sh + `;` masks failure
+    14	- HIGH plan:98 — rewired skill-triggering suite never executed
+    15	- HIGH plan:15,133 — residual-reference scan narrower than spec (docs/, tests/, *.md excluded)
+    16	- HIGH plan:215 — bump-version --audit checks new version, not stale 5.5.1
+    17	
+    18	## Triage
+    19	- Accepted (전부):
+    20	  1. Task 1 Step 0 + Step 5, Task 5 Step 2 + Step 5에 pre/post 행동 probe 추가 (haiku 프로브, 아티팩트 저장).
+    21	  2. 검증 요약에 4개 하네스(Claude/Codex/Gemini/OpenCode) 확인 절차 명시 — Codex/Gemini/OpenCode는 심링크·파일 기반이라 머지 후 finishing 단계가 유일한 검증 지점임을 명시.
+    22	  3. Task 6 Step 3을 `&&` 체인으로 교체, 존재하지 않는 shell-lint 제거 (upstream 전용 디렉토리였음 — 검증됨).
+    23	  4. Task 2 Step 4에 재배선된 peer-review 트리거 테스트 1회 실행 추가 (전체 스위트는 비용상 제외 — 변경된 항목만).
+    24	  5. Task 3 Step 4 스캔을 스펙 W1.5 전체 경로로 확장, 역사 기록만 명시적 glob 제외.
+    25	  6. Task 6에 구버전(5.5.1) 문자열 스캔 별도 추가.
+    26	- Rejected: 없음
+    27	- Needs user decision: 없음
+2467-    76	  echo ""
+2468-    77	
+2469:    78	  # Check if all versions match
+2470-    79	  local unique
+2471:    80	  unique=$(printf '%s\n' "${versions[@]}" | sort -u | wc -l | tr -d ' ')
+2472-    81	  if [[ "$unique" -gt 1 ]]; then
+2473:    82	    echo "DRIFT DETECTED — versions are not in sync:"
+2474:    83	    printf '%s\n' "${versions[@]}" | sort | uniq -c | sort -rn | while read -r count ver; do
+2475-    84	      echo "  $ver ($count files)"
+2476-    85	    done
+2477-    86	    has_drift=1
+2478-    87	  else
+2479:    88	    echo "All declared files are in sync at ${versions[0]}"
+2480-    89	  fi
+2481-    90	
+2482-    91	  return $has_drift
+2483-    92	}
+2484-    93	
+2485:    94	cmd_audit() {
+2486-    95	  # First run check
+2487-    96	  cmd_check || true
+2488-    97	  echo ""
+2489-    98	
+2490:    99	  # Determine the current version (most common across declared files)
+2491:   100	  local current_version
+2492:   101	  current_version=$(
+2493-   102	    while IFS=$'\t' read -r path field; do
+2494-   103	      local fullpath="$REPO_ROOT/$path"
+2495-   104	      [[ -f "$fullpath" ]] && read_json_field "$fullpath" "$field"
+2496-   105	    done < <(declared_files) | sort | uniq -c | sort -rn | head -1 | awk '{print $2}'
+2497-   106	  )
+2498-   107	
+2499:   108	  if [[ -z "$current_version" ]]; then
+2500:   109	    echo "error: could not determine current version" >&2
+2501-   110	    return 1
+2502-   111	  fi
+2503-   112	
+2504:   113	  echo "Audit: scanning repo for version string '$current_version'..."
+2505-   114	  echo ""
+2506-   115	
+2507-   116	  # Build grep exclude args
+2508-   117	  local -a exclude_args=()
+2509-   118	  while IFS= read -r pattern; do
+2510-   119	    exclude_args+=("--exclude=$pattern" "--exclude-dir=$pattern")
+2511:   120	  done < <(audit_excludes)
+2512-   121	
+2513-   122	  # Also always exclude binary files and .git
+2514-   123	  exclude_args+=("--exclude-dir=.git" "--exclude-dir=node_modules" "--binary-files=without-match")
+--
+2519-   128	    declared_paths+=("$path")
+2520-   129	  done < <(declared_files)
+2521-   130	
+2522:   131	  # Grep for the version string
+2523-   132	  local found_undeclared=0
+2524-   133	  while IFS= read -r match; do
+2525-   134	    local match_file
+--
+2538-   147	
+2539-   148	    if [[ "$is_declared" -eq 0 ]]; then
+2540-   149	      if [[ "$found_undeclared" -eq 0 ]]; then
+2541:   150	        echo "UNDECLARED files containing '$current_version':"
+2542-   151	        found_undeclared=1
+2543-   152	      fi
+2544-   153	      echo "  $match"
+2545-   154	    fi
+2546:   155	  done < <(grep -rn "${exclude_args[@]}" -F "$current_version" "$REPO_ROOT" 2>/dev/null || true)
+2547-   156	
+2548-   157	  if [[ "$found_undeclared" -eq 0 ]]; then
+2549:   158	    echo "No undeclared files contain the version string. All clear."
+2550-   159	  else
+2551-   160	    echo ""
+2552:   161	    echo "Review the above files — if they should be bumped, add them to .version-bump.json"
+2553:   162	    echo "If they should be skipped, add them to the audit.exclude list."
+2554-   163	  fi
+2555-   164	}
+2556-   165	
+2557-   166	cmd_bump() {
+2558:   167	  local new_version="$1"
+2559-   168	
+2560-   169	  # Validate semver-ish format
+2561:   170	  if ! echo "$new_version" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+2562:   171	    echo "error: '$new_version' doesn't look like a version (expected X.Y.Z)" >&2
+2563:   172	    exit 1
+2564-   173	  fi
+2565-   174	
+2566:   175	  echo "Bumping all declared files to $new_version..."
+2567-   176	  echo ""
+2568-   177	
+2569-   178	  while IFS=$'\t' read -r path field; do
+--
+2574-   183	    fi
+2575-   184	    local old_ver
+2576-   185	    old_ver=$(read_json_field "$fullpath" "$field")
+2577:   186	    write_json_field "$fullpath" "$field" "$new_version"
+2578:   187	    printf "  %-45s  %s -> %s\n" "$path ($field)" "$old_ver" "$new_version"
+2579-   188	  done < <(declared_files)
+2580-   189	
+2581-   190	  echo ""
+2582:   191	  echo "Done. Running audit to check for missed files..."
+2583-   192	  echo ""
+2584:   193	  cmd_audit
+2585-   194	}
+2586-   195	
+2587-   196	# --- main ---
+--
+2590-   199	  --check)
+2591-   200	    cmd_check
+2592-   201	    ;;
+2593:   202	  --audit)
+2594:   203	    cmd_audit
+2595-   204	    ;;
+2596-   205	  --help|-h|"")
+2597:   206	    echo "Usage: bump-version.sh <new-version> | --check | --audit"
+2598-   207	    echo ""
+2599:   208	    echo "  <new-version>  Bump all declared files to the given version"
+2600:   209	    echo "  --check        Show current versions, detect drift"
+2601:   210	    echo "  --audit        Check + scan repo for undeclared version references"
+2602:   211	    exit 0
+2603-   212	    ;;
+2604-   213	  --*)
+2605-   214	    echo "error: unknown flag '$1'" >&2
+2606:   215	    exit 1
+2607-   216	    ;;
+2608-   217	  *)
+2609-   218	    cmd_bump "$1"
+--
+2643-tests/opencode/test-plugin-loading.sh
+2644-tests/opencode/test-priority.sh
+2645-tests/opencode/test-tools.sh
+2646:tests/skill-triggering/prompts/dispatching-parallel-agents.txt
+2647:tests/skill-triggering/prompts/executing-plans.txt
+2648:tests/skill-triggering/prompts/requesting-code-review.txt
+2649:tests/skill-triggering/prompts/systematic-debugging.txt
+2650:tests/skill-triggering/prompts/test-driven-development.txt
+2651:tests/skill-triggering/prompts/writing-plans.txt
+2652:tests/skill-triggering/run-all.sh
+2653:tests/skill-triggering/run-test.sh
+2654-tests/subagent-driven-dev/go-fractals/design.md
+2655-tests/subagent-driven-dev/go-fractals/plan.md
+2656-tests/subagent-driven-dev/go-fractals/scaffold.sh
+--
+2664-hook: PreToolUse
+2665-hook: PreToolUse Completed
+2666-exec
+2667:[Omitted long matching line]
+2668: exited 1 in 0ms:
+2669-     1	#!/usr/bin/env bash
+2670:     2	# Test skill triggering with naive prompts
+2671-     3	# Usage: ./run-test.sh <skill-name> <prompt-file>
+2672-     4	#
+2673:     5	# Tests whether Claude triggers a skill based on a natural prompt
+2674-     6	# (without explicitly mentioning the skill)
+2675-     7	
+2676-     8	set -e
+--
+2682-    14	if [ -z "$SKILL_NAME" ] || [ -z "$PROMPT_FILE" ]; then
+2683-    15	    echo "Usage: $0 <skill-name> <prompt-file> [max-turns]"
+2684-    16	    echo "Example: $0 systematic-debugging ./test-prompts/debugging.txt"
+2685:    17	    exit 1
+2686-    18	fi
+2687-    19	
+2688:    20	# Get the directory where this script lives (should be tests/skill-triggering)
+2689-    21	SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+2690:    22	# Get the superpowers plugin root (two levels up from tests/skill-triggering)
+2691-    23	PLUGIN_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+2692-    24	
+2693-    25	TIMESTAMP=$(date +%s)
+2694:    26	OUTPUT_DIR="/tmp/superpowers-tests/${TIMESTAMP}/skill-triggering/${SKILL_NAME}"
+2695-    27	mkdir -p "$OUTPUT_DIR"
+2696-    28	
+2697-    29	# Read prompt from file
+--
+2723-    55	echo ""
+2724-    56	echo "=== Results ==="
+2725-    57	
+2726:    58	# Check if skill was triggered (look for Skill tool invocation)
+2727-    59	# In stream-json, tool invocations have "name":"Skill" (not "tool":"Skill")
+2728-    60	# Match either "skill":"skillname" or "skill":"namespace:skillname"
+2729-    61	SKILL_PATTERN='"skill":"([^"]*:)?'"${SKILL_NAME}"'"'
+2730-    62	if grep -q '"name":"Skill"' "$LOG_FILE" && grep -qE "$SKILL_PATTERN" "$LOG_FILE"; then
+2731:    63	    echo "✅ PASS: Skill '$SKILL_NAME' was triggered"
+2732-    64	    TRIGGERED=true
+2733-    65	else
+2734:    66	    echo "❌ FAIL: Skill '$SKILL_NAME' was NOT triggered"
+2735-    67	    TRIGGERED=false
+2736-    68	fi
+2737-    69	
+2738:    70	# Show what skills WERE triggered
+2739-    71	echo ""
+2740:    72	echo "Skills triggered in this run:"
+2741-    73	grep -o '"skill":"[^"]*"' "$LOG_FILE" 2>/dev/null | sort -u || echo "  (none)"
+2742-    74	
+2743-    75	# Show first assistant message
+--
+2750-    82	echo "Timestamp: $TIMESTAMP"
+2751-    83	
+2752-    84	if [ "$TRIGGERED" = "true" ]; then
+2753:    85	    exit 0
+2754-    86	else
+2755:    87	    exit 1
+2756-    88	fi
+2757:nl: tests/shell-lint/run.sh: No such file or directory
+2758-
+2759-hook: PostToolUse
+2760-hook: PostToolUse Completed
+2761-codex
+2762:[Omitted long matching line]
+2763-hook: PreToolUse
+2764-hook: PreToolUse Completed
+2765-exec
+2766:[Omitted long matching line]
+2767- succeeded in 0ms:
+2768-hook: PostToolUse
+2769-hook: PostToolUse Completed
+2770-hook: PreToolUse
+2771-hook: PreToolUse Completed
+2772-exec
+2773:/bin/zsh -lc "rg --files | rg '("'^|/)(shell-lint|.*lint.*)(/|$)|lint'"' || true
+2774-nl -ba hooks/hooks.json
+2775:rg -n '\"version\"[[:space:]]*:[[:space:]]*\"5\\.5\\.1\"' package.json .claude-plugin .cursor-plugin gemini-extension.json || true
+2776-[Omitted long context line]
+2777- succeeded in 0ms:
+2778-     1	{
+--
+2791-    14	    ]
+2792-    15	  }
+2793-    16	}
+2794:gemini-extension.json:4:  "version": "5.5.1",
+2795:package.json:3:  "version": "5.5.1",
+2796:.cursor-plugin/plugin.json:5:  "version": "5.5.1",
+2797:.claude-plugin/plugin.json:4:  "version": "5.5.1",
+2798:.claude-plugin/marketplace.json:8:    "version": "5.5.1"
+2799:.claude-plugin/marketplace.json:14:      "version": "5.5.1",
+2800-tests/jstack-static/run.sh:30:grep -q "docs/jstack/specs" skills/brainstorming/SKILL.md || fail "brainstorming must write specs under docs/jstack/specs"
+2801-tests/jstack-static/run.sh:31:grep -q "Problem Framing Gate" skills/brainstorming/SKILL.md || fail "brainstorming must include Problem Framing Gate"
+2802-tests/jstack-static/run.sh:36:grep -q "jstack:peer-review plan" skills/brainstorming/SKILL.md || fail "brainstorming must route specs through peer-review"
+--
+2830-hook: PostToolUse
+2831-hook: PostToolUse Completed
+2832-codex
+2833:BLOCKING
+2834-
+2835:[Omitted long matching line]
+2836:[Omitted long matching line]
+2837:[Omitted long matching line]
+2838:[Omitted long matching line]
+2839:[Omitted long matching line]
+2840:[Omitted long matching line]
+2841-hook: Stop
+2842-hook: Stop Completed
+2843-tokens used
+2844-68,935
+2845:BLOCKING
+2846-
+2847:[Omitted long matching line]
+2848:[Omitted long matching line]
+2849:[Omitted long matching line]
+2850:[Omitted long matching line]
+2851:[Omitted long matching line]
+2852:[Omitted long matching line]
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "find commands -maxdepth 1 -type f -print | sort && find .cursor-plugin .claude-plugin -maxdepth 2 -type f -print | sort && printf '%s\\n' '--- simulate old-version scan with missing path only (read-only) ---' && rg -n \"unlikely-pattern-2d608b03\" package.json .claude-plugin .cursor-plugin gemini-extension.json hooks scripts skills does-not-exist tests 2>/dev/null; printf 'exit=%s\\n' \""'$?"' in /Users/kakao1/.codex/jstack/.claude/worktrees/jep-495-adhd-integration
+ succeeded in 0ms:
+commands/brainstorm.md
+commands/execute-plan.md
+commands/write-plan.md
+.claude-plugin/marketplace.json
+.claude-plugin/plugin.json
+.cursor-plugin/plugin.json
+--- simulate old-version scan with missing path only (read-only) ---
+exit=2
+
+hook: PostToolUse
+hook: PostToolUse Completed
+codex
+BLOCKING
+
+- BLOCKING — docs/jstack/plans/2026-07-20-adhd-integration-6.0.0.md:262 — After Task 4 removes the only files under `commands/`, the new version scan targets the nonexistent directory and suppresses stderr, causing `rg` to exit 2 instead of providing a valid zero-match result.
+
+The six prior findings are otherwise addressed.
+hook: Stop
+hook: Stop Completed
+tokens used
+56,654
+BLOCKING
+
+- BLOCKING — docs/jstack/plans/2026-07-20-adhd-integration-6.0.0.md:262 — After Task 4 removes the only files under `commands/`, the new version scan targets the nonexistent directory and suppresses stderr, causing `rg` to exit 2 instead of providing a valid zero-match result.
+
+The six prior findings are otherwise addressed.

@@ -259,7 +259,7 @@ bash tests/jstack-static/run.sh \
 Expected: `[PASS]` + `INJECTION-OK`. 이어서 구버전 문자열 스캔 (bump-version --audit는 신버전 존재만 확인하므로 별도):
 
 ```bash
-rg -n "5\.5\.1" package.json .claude-plugin .cursor-plugin gemini-extension.json hooks scripts skills commands tests 2>/dev/null
+rg -n "5\.5\.1" package.json .claude-plugin .cursor-plugin gemini-extension.json hooks scripts skills tests
 ```
 
 Expected: 출력 없음
