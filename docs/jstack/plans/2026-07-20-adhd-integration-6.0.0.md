@@ -23,8 +23,18 @@
 - Modify: `tests/jstack-static/run.sh`
 - Delete: `skills/receiving-code-review/`
 
-**Test-first:** 정적 어서션 — peer-review에 "Receiving Review Feedback" 섹션 존재 + receiving-code-review 디렉토리 부재
+**Test-first:** 행동 베이스라인 probe(RED) + 정적 어서션 — peer-review에 "Receiving Review Feedback" 섹션 존재 + receiving-code-review 디렉토리 부재
 **Parallel:** sequential (Task 2와 같은 테스트 파일 수정)
+
+- [ ] **Step 0: Iron Law 베이스라인 probe (수정 전).** 현재(병합 전) peer-review SKILL.md만 컨텍스트로 넣고 리뷰 피드백 수신 시나리오를 1회 실행, 결과를 `.jstack/artifacts/pressure-task1-baseline.txt`에 저장:
+
+```bash
+claude -p --model claude-haiku-4-5 "다음 스킬 지침을 따르라: $(cat skills/peer-review/SKILL.md)
+
+리뷰어가 '이 레거시 코드 제거하세요'라고 피드백했다. 어떻게 응답할지 답하라." > .jstack/artifacts/pressure-task1-baseline.txt
+```
+
+기대(RED 근거): 현행 peer-review에는 수신 규율 섹션이 없어 성과적 동의 금지·검증 우선 지침이 응답에 반영된다는 보장이 없음을 기록.
 
 - [ ] **Step 1: RED — 어서션 추가.** `tests/jstack-static/run.sh`에 추가:
 
@@ -64,7 +74,7 @@ top-level PR comment.
 
 - [ ] **Step 4: 디렉토리 삭제.** Run: `git rm -r skills/receiving-code-review`
 
-- [ ] **Step 5: GREEN 확인.** Run: `bash tests/jstack-static/run.sh` → Expected: `[PASS] jstack static contract`
+- [ ] **Step 5: GREEN 확인 + 사후 probe.** Run: `bash tests/jstack-static/run.sh` → Expected: `[PASS] jstack static contract`. Step 0과 동일한 probe를 병합된 SKILL.md로 재실행해 `.jstack/artifacts/pressure-task1-after.txt` 저장 → 기대: 응답이 검증-우선 패턴을 따르고 성과적 동의 문구("You're absolutely right" 류) 없음.
 
 - [ ] **Step 6: Commit.** `git add -A && git commit -m "refactor(skills): merge receiving-code-review into peer-review (JEP-495)"`
 
@@ -97,7 +107,7 @@ git mv tests/skill-triggering/prompts/requesting-code-review.txt tests/skill-tri
 
 `tests/skill-triggering/run-all.sh`의 SKILLS 배열에서 `"requesting-code-review"`를 `"peer-review"`로 교체 (트리거 커버리지 유지 — 완료 후 리뷰 요청 프롬프트는 이제 peer-review를 트리거해야 함).
 
-- [ ] **Step 4: GREEN 확인.** Run: `bash tests/jstack-static/run.sh` → Expected: PASS
+- [ ] **Step 4: GREEN 확인 + 재배선된 트리거 테스트 실행.** Run: `bash tests/jstack-static/run.sh` → PASS. Run: `bash tests/skill-triggering/run-test.sh peer-review tests/skill-triggering/prompts/peer-review.txt 3` → Expected: 트리거 성공 (완료-후-리뷰 프롬프트가 peer-review를 트리거). 실패 시 프롬프트 문구를 peer-review description에 맞게 조정 후 재실행.
 
 - [ ] **Step 5: Commit.** `git commit -am "refactor(skills): delete requesting-code-review stub, retarget trigger test to peer-review (JEP-495)"`
 
@@ -130,7 +140,16 @@ Run → Expected: FAIL "must be archived"
   - `docs/README.codex.md:35`: dispatching-parallel-agents 언급 제거
   - `tests/skill-triggering/run-all.sh` SKILLS 배열에서 `"dispatching-parallel-agents"` 제거, `git rm tests/skill-triggering/prompts/dispatching-parallel-agents.txt`
 
-- [ ] **Step 4: GREEN + 잔여 참조 스캔.** Run: `bash tests/jstack-static/run.sh` → PASS. Run: `rg -l "requesting-code-review|receiving-code-review|dispatching-parallel-agents" skills/ commands/ hooks/ README.md` → Expected: 출력 없음
+- [ ] **Step 4: GREEN + 잔여 참조 스캔 (스펙 W1.5 전체 경로).** Run: `bash tests/jstack-static/run.sh` → PASS. Run:
+
+```bash
+rg -ln "requesting-code-review|receiving-code-review|dispatching-parallel-agents" \
+  skills/ commands/ hooks/ tests/ docs/ README.md AGENTS.md CLAUDE.md GEMINI.md \
+  --glob '!docs/plans/**' --glob '!docs/superpowers/**' \
+  --glob '!docs/jstack/plans/**' --glob '!docs/jstack/specs/**' 2>/dev/null
+```
+
+Expected: 출력 없음 (역사 기록 — RELEASE-NOTES.md, 과거 plans/specs — 만 제외 대상이며 라이브 문서·테스트·스킬은 전부 스캔에 포함)
 
 - [ ] **Step 5: Commit.** `git commit -am "refactor(skills): archive dispatching-parallel-agents, update live references (JEP-495)"`
 
@@ -170,7 +189,7 @@ grep -q "conversational and status output only" skills/using-jstack/SKILL.md || 
 
 Run → FAIL
 
-- [ ] **Step 2: 섹션 추가.** `skills/using-jstack/SKILL.md` 말미(`## User Instructions` 섹션 뒤)에 삽입 — 아래 전문 그대로:
+**[Step 3에서 삽입할 전문]** — `skills/using-jstack/SKILL.md` 말미(`## User Instructions` 섹션 뒤)에 삽입:
 
 ```markdown
 ## Output Contract
@@ -195,14 +214,26 @@ Exceptions override rules: when the user asks for explanation, when ambiguity
 needs a clarifying question, and when a destructive action needs confirmation.
 ```
 
-- [ ] **Step 3: GREEN + 주입 검증.** Run: `bash tests/jstack-static/run.sh` → PASS. Run: `bash hooks/session-start | python3 -m json.tool > /dev/null && bash hooks/session-start | grep -c "Output Contract"` → Expected: JSON 유효 + `1` 이상
+- [ ] **Step 2: Iron Law 베이스라인 probe (수정 전).** 현행(contract 없는) using-jstack SKILL.md를 컨텍스트로 두 시나리오 실행, `.jstack/artifacts/pressure-task5-baseline-{a,b}.txt` 저장:
+  - (a) 짧은 질문("git stash와 stash pop 차이?")
+  - (b) "인증 모듈 스펙 초안 작성해줘"
+  기대(RED 근거): (a)에서 도입부/마무리 인사 억제가 보장되지 않음을 기록.
 
-- [ ] **Step 4: Pressure smoke (Iron Law 시나리오).** 새 SKILL.md 전문을 시스템 컨텍스트로 넣은 1회성 프로브 2발:
-  - (a) 짧은 질문("git stash와 stash pop 차이?") → 기대: 도입부·마무리 인사 없음, 상태 라인 없음(short Q&A 예외 동작)
-  - (b) "인증 모듈 스펙 초안 작성해줘" → 기대: 상세한 아티팩트 출력 유지(contract 미적용 확인)
-  결과를 `.jstack/artifacts/`에 저장하고 육안 판정. 실패 시 contract 문구 수정 후 재실행.
+```bash
+claude -p --model claude-haiku-4-5 "다음 지침을 따르라: $(cat skills/using-jstack/SKILL.md)
 
-- [ ] **Step 5: Commit.** `git commit -am "feat(using-jstack): add ADHD output contract for conversational output (JEP-495)"`
+git stash와 stash pop 차이?" > .jstack/artifacts/pressure-task5-baseline-a.txt
+```
+
+(b)도 동일 형식. 섹션 추가 후 같은 명령을 `after-{a,b}.txt`로 재실행한다.
+
+- [ ] **Step 3: 섹션 추가.** 위의 [Step 3에서 삽입할 전문] 블록을 그대로 삽입.
+
+- [ ] **Step 4: GREEN + 주입 검증.** Run: `bash tests/jstack-static/run.sh` → PASS. Run: `bash hooks/session-start | python3 -m json.tool > /dev/null && bash hooks/session-start | grep -c "Output Contract"` → Expected: JSON 유효 + `1` 이상
+
+- [ ] **Step 5: 사후 probe 비교.** Step 2와 동일 명령을 새 SKILL.md로 재실행 → 기대: (a) 도입부·마무리 인사 없음, 5개 이하 리스트 (b) 상세한 아티팩트 출력 유지(contract의 artifact 예외 동작). 베이스라인 대비 비교 판정, 실패 시 contract 문구 수정 후 재실행.
+
+- [ ] **Step 6: Commit.** `git commit -am "feat(using-jstack): add ADHD output contract for conversational output (JEP-495)"`
 
 ### Task 6: 버전 6.0.0 + RELEASE-NOTES + 최종 검증
 
@@ -216,7 +247,22 @@ needs a clarifying question, and when a destructive action needs confirmation.
 
 - [ ] **Step 2: RELEASE-NOTES 추가.** 최상단에 6.0.0 항목: Output Contract 추가(출처 크레딧), 스킬 정리 3종(breaking — 명시적 호출자는 peer-review 사용), deprecated 커맨드 제거(major 약속 이행), 테스트 재배선.
 
-- [ ] **Step 3: 전체 검증.** Run: `bash tests/jstack-static/run.sh && bash tests/shell-lint/run.sh 2>/dev/null; bash hooks/session-start | python3 -m json.tool > /dev/null && echo INJECTION-OK` → Expected: PASS + INJECTION-OK
+- [ ] **Step 3: 전체 검증 (실패 마스킹 금지 — `&&` 체인만 사용).**
+
+```bash
+bash tests/jstack-static/run.sh \
+  && bash hooks/session-start | python3 -m json.tool > /dev/null \
+  && bash hooks/session-start | grep -q "Output Contract" \
+  && echo INJECTION-OK
+```
+
+Expected: `[PASS]` + `INJECTION-OK`. 이어서 구버전 문자열 스캔 (bump-version --audit는 신버전 존재만 확인하므로 별도):
+
+```bash
+rg -n "5\.5\.1" package.json .claude-plugin .cursor-plugin gemini-extension.json hooks scripts skills commands tests 2>/dev/null
+```
+
+Expected: 출력 없음
 
 - [ ] **Step 4: Commit.** `git commit -am "chore: release jstack 6.0.0 (JEP-495)"`
 
@@ -231,14 +277,14 @@ needs a clarifying question, and when a destructive action needs confirmation.
 | session-start JSON + contract 포함 | Task 5 Step 3, Task 6 Step 3 |
 | 상호 참조 0건 | Task 3 Step 4 |
 | 6.0.0 범프 + RELEASE-NOTES | Task 6 |
-| Codex skill discovery 확인 | 머지 후 finishing 단계에서 `ls ~/.codex/skills/jstack/using-jstack` + grep "Output Contract" (심링크라 머지 즉시 반영) |
+| 하네스별 전달 확인 (스펙 W2) | 머지 후 finishing 단계에서 전 하네스 확인: **Claude Code** `bash hooks/session-start` 주입에 contract 포함(Task 5·6에서 선검증) · **Codex** `grep -q "Output Contract" ~/.codex/skills/jstack/using-jstack/SKILL.md` (심링크라 머지 즉시 반영) · **Gemini** `gemini-extension.json` 버전 6.0.0 + GEMINI.md의 스킬 로드 경로가 skills/ 유지 확인 · **OpenCode** `.opencode` 플러그인의 skills 디렉토리 참조가 삭제된 3개 스킬을 하드코딩하지 않음(`rg "requesting-code-review|receiving-code-review|dispatching-parallel-agents" .opencode/` 0건) |
 
 ## JSTACK REVIEW REPORT
 
 | Check | Reviewer | Runs | Status | Findings | Artifact |
 |---|---|---:|---|---|---|
 | Spec Review | codex | 1 | Pass (issues fixed) | BLOCKING 2 + HIGH 3 반영 | .jstack/artifacts/peer-review-codex-plan-20260720T090205Z.md |
-| Plan Review | codex | 0 | Pending | - | - |
+| Plan Review | codex | 1 | Issues Found → 반영됨 | BLOCKING 3 (Iron Law probe 부재, 하네스 검증 누락, shell-lint 오참조) + HIGH 3 (트리거 미실행, 스캔 범위, audit 한계) — 전부 수용·플랜 반영 | .jstack/artifacts/peer-review-codex-plan2-*.md |
 | Verification | Local tests | 0 | Pending | - | - |
 
 ## Execution Handoff
