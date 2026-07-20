@@ -1,0 +1,42 @@
+Warning: no stdin data received in 3s, proceeding without it. If piping from a slow command, redirect stdin explicitly: < /dev/null to skip, or wait longer.
+**`git stash`** 와 **`git stash pop`** 은 다른 명령어입니다:
+
+## `git stash` — 변경사항 임시 저장
+현재 작업 디렉토리의 미커밋 변경사항을 임시로 저장합니다.
+```bash
+git stash
+```
+- 작업 디렉토리가 깨끗해짐 (stash에만 변경사항이 보존)
+- 나중에 불러올 수 있음
+- 여러 개를 쌓을 수 있음 (스택 구조)
+
+## `git stash pop` — 임시 저장 복구 + 삭제
+가장 최근의 stash를 불러오고 **동시에 그 stash를 삭제**합니다.
+```bash
+git stash pop
+```
+- `git stash apply` + `git stash drop` 을 한 번에 수행
+- 복구한 후 stash 목록에서 제거됨
+
+## 비교
+
+| 명령어 | 동작 | Stash 남음? |
+|--------|------|-----------|
+| `git stash` | 변경사항만 저장 | - |
+| `git stash apply` | stash 복구 | ✅ (유지) |
+| `git stash pop` | stash 복구 + 삭제 | ❌ (삭제됨) |
+
+## 실용적 차이
+- **한 번만 쓸 것** → `pop` (정리됨)
+- **다시 쓸 가능성** → `apply` (보존됨)
+- **복구 후 다른 지점에도 적용** → `apply` (여러 번 가능)
+
+예시:
+```bash
+git stash                    # 변경사항 저장
+git checkout main            # 다른 브랜치로 전환
+git stash pop                # 복구하고 stash 삭제
+# vs
+git stash apply              # 복구만 하고 stash는 유지
+git stash apply              # 같은 stash를 다시 적용 가능
+```

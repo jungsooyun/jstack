@@ -1,0 +1,22 @@
+Warning: no stdin data received in 3s, proceeding without it. If piping from a slow command, redirect stdin explicitly: < /dev/null to skip, or wait longer.
+프로젝트 상황이 이해되었습니다. 이제 인증 모듈 스펙에 대해 명확히 해야 할 사항들을 질문하겠습니다.
+
+---
+
+## 1단계: 문제 프레이밍 게이트
+
+먼저 인증 모듈에 대한 기본 컨텍스트를 확인하고 싶습니다.
+
+**현재 상황:**
+- 현재 JStack 프로젝트는 JEP-495 "ADHD 통합" 작업 중입니다
+- 최근 작업이 명령어 제거 및 스킬 아카이빙에 집중했습니다
+
+**첫 번째 질문입니다:**
+
+이 인증 모듈은 다음 중 어디에 속합니까?
+
+1. **JStack 자체의 인증** — JStack 플러그인/CLI 사용자 인증
+2. **JStack이 관리하는 프로젝트의 인증** — JStack이 지원하는 애플리케이션(예: agent SDK, 샌드박스)의 인증 기능
+3. **별도 프로젝트의 인증** — 현재 작업과 무관한 새로운 프로젝트
+
+또한, 이 작업이 진행 중인 **JEP-495 ADHD 통합**과 연관이 있는지, 아니면 병렬 작업인지 알려주세요.

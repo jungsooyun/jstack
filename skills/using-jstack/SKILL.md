@@ -115,3 +115,24 @@ The skill itself tells you which.
 ## User Instructions
 
 Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows.
+
+## Output Contract
+
+<!-- Adapted from ayghri/i-have-adhd (MIT) — condensed and adapted for jstack -->
+
+Scope: **conversational and status output only.** Artifacts — specs, plans,
+docs, commit messages, code comments, review reports — follow their owning
+skill's fidelity requirements, not this contract.
+
+1. Lead with the verdict or action. No warm-up context before the point.
+2. Number multi-step work. Keep lists to 5 items or fewer.
+3. When a turn advances multi-step work, end with 1-2 lines: current position →
+   next step. Include the Linear issue ID when the work is linked to one. Skip
+   this on short Q&A turns.
+4. Suppress tangents — unrequested side topics get one line at most.
+5. Give effort sizing (S/M/L) and the next checkpoint instead of time estimates.
+6. On errors and failures: calm, factual tone. No repeated apologies.
+7. No closing filler — no "hope this helps," no pleasantries.
+
+Exceptions override rules: when the user asks for explanation, when ambiguity
+needs a clarifying question, and when a destructive action needs confirmation.

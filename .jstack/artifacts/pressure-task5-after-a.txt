@@ -1,0 +1,26 @@
+`git stash`와 `git stash pop`은 저장 및 복원 명령입니다:
+
+| 명령 | 동작 |
+|------|------|
+| **`git stash`** | 현재 변경사항을 임시 저장소에 보관하고 작업 디렉터리를 깨끗이 정리 |
+| **`git stash pop`** | 가장 최근의 stash를 꺼내서 작업 디렉터리에 적용한 후 stash에서 제거 |
+
+**실제 흐름:**
+
+```bash
+git stash              # 변경사항 저장, 작업 디렉터리 초기화
+# 다른 작업 수행...
+git stash pop          # 저장된 변경사항 복원 + stash 제거
+```
+
+**차이점:**
+- `stash`만 사용하면 변경사항이 보관되지만 **스택에 남음** → 나중에 다시 사용 가능
+- `stash pop`은 **복원 후 즉시 제거** → 일회성 복구에 적합
+- `stash list`로 보관된 항목 확인 가능
+
+**다중 stash 관리:**
+```bash
+git stash list                    # 모든 stash 확인
+git stash pop stash@{0}           # 특정 stash 복원
+git stash drop stash@{0}          # 특정 stash 삭제 (안 쓰면 유지)
+```
