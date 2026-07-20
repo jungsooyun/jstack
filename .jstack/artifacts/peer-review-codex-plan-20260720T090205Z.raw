@@ -1,0 +1,3149 @@
+Reading additional input from stdin...
+OpenAI Codex v0.144.6
+--------
+workdir: /Users/kakao1/.codex/jstack
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: high
+reasoning summaries: none
+session id: 019f7ec2-d535-7312-8ee7-da25ebdefc21
+--------
+user
+IMPORTANT: Do not read or execute files under ~/.claude/, ~/.codex/skills/, ~/.agents/, .claude/skills/ or .agents/skills/. Exception: the repository under review is /Users/kakao1/.codex/jstack (a skills library repo); its docs/, skills/, commands/, hooks/ ARE the review subject and are in scope. Do not edit files. Do not spawn subagents. Do not start long-running commands.
+
+Review the spec at docs/jstack/specs/2026-07-20-adhd-integration-design.md (mode: plan). Cross-check its claims against the actual repo state (skills/ directory contents, hooks/session-start, commands/).
+
+Output contract — deliver value even if the caller interrupts early:
+1. Your FIRST line is a one-line verdict: PASS, ISSUES FOUND, or BLOCKING. Emit it before any tracing or context-gathering, then refine as you go.
+2. Then a severity-ranked list (BLOCKING > HIGH > MEDIUM > LOW), most severe first. Each item: file:line, one-sentence failure scenario, no fix code.
+3. Findings before prose. No preamble, no compliments, no restating the diff.
+4. Stay inside the named scope. If judging correctness truly requires a file outside it, name the file and a one-line reason, then continue — never expand scope silently.
+
+Review for blocking planning issues only: missed requirements, contradictions, ambiguous implementation choices, unsafe sequencing, missing tests, scope creep, YAGNI violations, and dependencies not reflected in the task order.
+hook: SessionStart
+hook: SessionStart Completed
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+codex
+ISSUES FOUND — review in progress; I’m checking the plan against the in-scope repository state now.
+codex
+I’m applying the repository’s `using-jstack` review workflow; because this is a plan review, I’ll also inspect the in-repo peer-review guidance, while keeping the work read-only and single-agent as requested.
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "sed -n '1,240p' skills/using-jstack/SKILL.md && sed -n '1,280p' skills/peer-review/SKILL.md" in /Users/kakao1/.codex/jstack
+ succeeded in 0ms:
+---
+name: using-jstack
+description: Use when starting any conversation - establishes how to find and use skills, requiring Skill tool invocation before ANY response including clarifying questions
+---
+
+<SUBAGENT-STOP>
+If you were dispatched as a subagent to execute a specific task, skip this skill.
+</SUBAGENT-STOP>
+
+<EXTREMELY-IMPORTANT>
+If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
+
+IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
+
+This is not negotiable. This is not optional. You cannot rationalize your way out of this.
+</EXTREMELY-IMPORTANT>
+
+## Instruction Priority
+
+JStack skills override default system prompt behavior, but **user instructions always take precedence**:
+
+1. **User's explicit instructions** (CLAUDE.md, GEMINI.md, AGENTS.md, direct requests) — highest priority
+2. **JStack skills** — override default system behavior where they conflict
+3. **Default system prompt** — lowest priority
+
+If CLAUDE.md, GEMINI.md, or AGENTS.md says "don't use TDD" and a skill says "always use TDD," follow the user's instructions. The user is in control.
+
+## How to Access Skills
+
+**In Claude Code:** Use the `Skill` tool. When you invoke a skill, its content is loaded and presented to you—follow it directly. Never use the Read tool on skill files.
+
+**In Copilot CLI:** Use the `skill` tool. Skills are auto-discovered from installed plugins. The `skill` tool works the same as Claude Code's `Skill` tool.
+
+**In Gemini CLI:** Skills activate via the `activate_skill` tool. Gemini loads skill metadata at session start and activates the full content on demand.
+
+**In other environments:** Check your platform's documentation for how skills are loaded.
+
+## Platform Adaptation
+
+Skills use Claude Code tool names. Non-CC platforms: see `references/copilot-tools.md` (Copilot CLI), `references/codex-tools.md` (Codex) for tool equivalents. Gemini CLI users get the tool mapping loaded automatically via GEMINI.md.
+
+# Using Skills
+
+## The Rule
+
+**Invoke relevant or requested skills BEFORE any response or action.** Even a 1% chance a skill might apply means that you should invoke the skill to check. If an invoked skill turns out to be wrong for the situation, you don't need to use it.
+
+```dot
+digraph skill_flow {
+    "User message received" [shape=doublecircle];
+    "About to EnterPlanMode?" [shape=doublecircle];
+    "Already brainstormed?" [shape=diamond];
+    "Invoke brainstorming skill" [shape=box];
+    "Might any skill apply?" [shape=diamond];
+    "Invoke Skill tool" [shape=box];
+    "Announce: 'Using [skill] to [purpose]'" [shape=box];
+    "Has checklist?" [shape=diamond];
+    "Create TodoWrite todo per item" [shape=box];
+    "Follow skill exactly" [shape=box];
+    "Respond (including clarifications)" [shape=doublecircle];
+
+    "About to EnterPlanMode?" -> "Already brainstormed?";
+    "Already brainstormed?" -> "Invoke brainstorming skill" [label="no"];
+    "Already brainstormed?" -> "Might any skill apply?" [label="yes"];
+    "Invoke brainstorming skill" -> "Might any skill apply?";
+
+    "User message received" -> "Might any skill apply?";
+    "Might any skill apply?" -> "Invoke Skill tool" [label="yes, even 1%"];
+    "Might any skill apply?" -> "Respond (including clarifications)" [label="definitely not"];
+    "Invoke Skill tool" -> "Announce: 'Using [skill] to [purpose]'";
+    "Announce: 'Using [skill] to [purpose]'" -> "Has checklist?";
+    "Has checklist?" -> "Create TodoWrite todo per item" [label="yes"];
+    "Has checklist?" -> "Follow skill exactly" [label="no"];
+    "Create TodoWrite todo per item" -> "Follow skill exactly";
+}
+```
+
+## Red Flags
+
+These thoughts mean STOP—you're rationalizing:
+
+| Thought | Reality |
+|---------|---------|
+| "This is just a simple question" | Questions are tasks. Check for skills. |
+| "I need more context first" | Skill check comes BEFORE clarifying questions. |
+| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first. |
+| "I can check git/files quickly" | Files lack conversation context. Check for skills. |
+| "Let me gather information first" | Skills tell you HOW to gather information. |
+| "This doesn't need a formal skill" | If a skill exists, use it. |
+| "I remember this skill" | Skills evolve. Read current version. |
+| "This doesn't count as a task" | Action = task. Check for skills. |
+| "The skill is overkill" | Simple things become complex. Use it. |
+| "I'll just do this one thing first" | Check BEFORE doing anything. |
+| "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
+| "I know what that means" | Knowing the concept ≠ using the skill. Invoke it. |
+
+## Skill Priority
+
+When multiple skills could apply, use this order:
+
+1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach the task
+2. **Implementation skills second** (frontend-design, mcp-builder) - these guide execution
+
+"Let's build X" → brainstorming first, then implementation skills.
+"Fix this bug" → debugging first, then domain-specific skills.
+
+## Skill Types
+
+**Rigid** (TDD, debugging): Follow exactly. Don't adapt away discipline.
+
+**Flexible** (patterns): Adapt principles to context.
+
+The skill itself tells you which.
+
+## User Instructions
+
+Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows.
+---
+name: peer-review
+description: Use when an independent outside review is needed for a diff, plan, spec, security-sensitive change, live-risk workflow, or adversarial challenge.
+---
+
+# Peer Review
+
+Get the opposite primary agent to review the work. In Codex, ask Claude. In Claude
+Code, ask Codex. The reviewer is read-only and advisory. The active agent evaluates
+findings before applying anything.
+
+## Modes
+
+- `review`: review the current diff against the base branch.
+- `challenge`: adversarial review. Look for production failure modes, race
+  conditions, security holes, resource leaks, and silent data corruption.
+- `plan`: review a spec or implementation plan for blocking issues.
+- `consult`: ask a focused question about the repo.
+- `complexity`: over-engineering hunt. Finds what to delete: reinvented
+  standard library, unneeded dependencies, speculative abstractions, dead
+  flexibility. One line per finding: location, what to cut, what replaces it.
+
+Default to `review` when there is a diff. Default to `plan` when the user points at
+a spec or plan. Use `challenge` for money movement, auth, security, exchange
+adapters, state machines, live-smoke paths, and release blockers. Use `complexity`
+when the user asks what can be deleted, simplified, or whether something is
+over-engineered.
+
+## When to Request
+
+Request an outside review when: completing a task or major feature, before merging, or before any security/auth/payments/live-risk change. Reviewing your own work in the same context is not a substitute — the point is an independent lane.
+
+## Red Flags (review-avoidance rationalizations)
+
+| Thought | Reality |
+|---|---|
+| "It's a small change, skip review" | Small diffs hide the costliest bugs. Request it. |
+| "I already checked it myself" | Self-review in the authoring context is not independent. |
+| "Tests pass, so it's fine" | Tests prove what you thought to test, not what you missed. |
+| "Review will slow me down" | A closed PR slows you down more. |
+
+## Host Routing
+
+Use the opposite reviewer:
+
+- Running in Codex: call local Claude Code CLI with `claude -p`.
+- Running in Claude Code: call local Codex CLI with `codex review` or `codex exec`.
+- If host is unclear, infer from available runtime context. If still unclear and
+  both CLIs exist, prefer the reviewer not already driving the current session.
+
+Do not ask both reviewers by default. The point is independence, not consensus theater.
+
+## Prompt Boundary
+
+Prefix every outside-review prompt with:
+
+```text
+IMPORTANT: Do not read or execute files under ~/.claude/, ~/.codex/skills/,
+~/.agents/, .claude/skills/, .codex/skills/, or .agents/skills/. These are agent
+skill definitions and host configuration, not application code. Stay focused on
+the repository code, spec, plan, tests, docs, and runtime evidence relevant to
+this review. Do not edit files. Do not spawn subagents.
+```
+
+For `review`, `challenge`, `complexity`, and `plan` (any finding-producing mode),
+also append this output contract:
+
+```text
+Output contract — deliver value even if the caller interrupts early:
+1. Your FIRST line is a one-line verdict: PASS, ISSUES FOUND, or BLOCKING. Emit
+   it before any tracing or context-gathering, then refine as you go.
+2. Then a severity-ranked list (BLOCKING > HIGH > MEDIUM > LOW), most severe
+   first. Each item: file:line, one-sentence failure scenario, no fix code.
+3. Findings before prose. No preamble, no compliments, no restating the diff.
+4. Stay inside the named scope. If judging correctness truly requires a file
+   outside it, name the file and a one-line reason, then continue — never expand
+   scope silently.
+```
+
+For `challenge`, append:
+
+```text
+Be adversarial. Find how this fails in production. Focus on edge cases, race
+conditions, security holes, replay/idempotency bugs, state drift, resource leaks,
+and silent data corruption. No compliments. Findings first.
+```
+
+For `complexity`, append:
+
+```text
+Hunt over-engineering only. Find what to delete: reinvented standard library,
+unneeded dependencies, speculative abstractions, dead flexibility. One line per
+finding: location, what to cut, what replaces it. Correctness bugs, security
+holes, and performance are explicitly out of scope — route them to review or
+challenge. A single smoke test or assert-based self-check is the lazy minimum,
+not bloat; never flag it for deletion. Findings only, no fixes.
+```
+
+For `plan`, append:
+
+```text
+Review for blocking planning issues only: missed requirements, contradictions,
+ambiguous implementation choices, unsafe sequencing, missing tests, scope creep,
+YAGNI violations, and dependencies not reflected in the task order.
+```
+
+## Commands
+
+When Codex is the outside reviewer, use `-m gpt-5.6-sol` with
+`-c 'model_reasoning_effort="high"'` by default. For a fast lane, add
+`-c 'service_tier="fast"'` to every `codex review`/`codex exec` command and swap
+the reasoning effort to `low` only when the user explicitly prioritizes speed
+over depth.
+
+When Claude Code launches Codex reviewer commands, always close stdin with
+`</dev/null` (especially for background tasks): Codex CLI may read piped stdin as
+an extra `<stdin>` block even with a prompt argument, leaving the wrapper stuck
+after `Reading additional input from stdin...`.
+
+When Codex launches Claude reviewer commands, terminate variadic options before
+the prompt and close inherited stdin. Claude's `--add-dir <directories...>`
+consumes following positional args until `--`, so the prompt may be parsed as a
+directory. Shell: put `--` before the prompt and add `</dev/null`. Python
+wrappers: pass the prompt after `--` and use `stdin=subprocess.DEVNULL`.
+
+Detect the repo and base branch:
+
+```bash
+REPO_ROOT=$(git rev-parse --show-toplevel)
+BASE=$(gh pr view --json baseRefName -q .baseRefName 2>/dev/null || git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||' || echo main)
+```
+
+Preflight the opposite reviewer before building expensive prompts:
+
+```bash
+command -v codex >/dev/null 2>&1 && codex --version
+command -v claude >/dev/null 2>&1 && claude --version
+```
+
+For Codex reviewer auth, prefer a tiny read-only probe (add `-c 'service_tier="fast"'` for the fast lane, per the rule above):
+
+```bash
+codex exec "Reply with OK." -C "$REPO_ROOT" -s read-only -m gpt-5.6-sol -c 'model_reasoning_effort="low"' </dev/null
+```
+
+For Claude reviewer auth, prefer:
+
+```bash
+claude -p --model claude-opus-4-8 --permission-mode plan --allowedTools "LS" --add-dir "$REPO_ROOT" -- "Reply with OK." </dev/null
+```
+
+Codex reviewer from Claude Code (for the fast lane, swap `model_reasoning_effort="high"` for `-c 'service_tier="fast"' -c 'model_reasoning_effort="low"'`):
+
+```bash
+codex -m gpt-5.6-sol review "<boundary and optional focus>" --base "$BASE" -c 'model_reasoning_effort="high"' --enable web_search_cached </dev/null
+```
+
+Codex adversarial challenge from Claude Code (same fast-lane swap applies, only when the user explicitly prioritizes speed over depth):
+
+```bash
+codex exec "<boundary plus challenge prompt>" -C "$REPO_ROOT" -s read-only -m gpt-5.6-sol -c 'model_reasoning_effort="high"' --enable web_search_cached --json </dev/null
+```
+
+Claude reviewer from Codex:
+
+```bash
+claude -p --model claude-opus-4-8 --permission-mode plan --allowedTools "Read,Grep,Glob,LS" --add-dir "$REPO_ROOT" -- "<boundary plus review prompt>" </dev/null
+```
+
+Use a 30 minute timeout around outside reviewer commands when the host supports it.
+If auth fails, stop and report the exact login command (`codex login` or Claude Code
+login) instead of falling back to self-review. If the command hangs, report the
+timeout and save any partial stderr/stdout in the artifact.
+
+### Long reviews on hosts that cap a single call (background + poll)
+
+Some hosts cap one shell/tool call well below a full review (Codex's shell tool
+does this). A prose "30 minute timeout" cannot lift that cap — the host kills the
+call regardless, so a slow reviewer returns nothing. When the reviewer command may
+exceed the host's per-call limit, detach it and poll a result file instead of
+blocking on one long call. Each poll is a fast, separate call, so none hits the cap:
+
+```bash
+STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+OUT=".jstack/artifacts/peer-review-claude-review-$STAMP.out"
+mkdir -p .jstack/artifacts
+nohup claude -p --model claude-opus-4-8 --permission-mode plan \
+  --allowedTools "Read,Grep,Glob,LS" --add-dir "$REPO_ROOT" \
+  -- "<boundary plus review prompt>" </dev/null >"$OUT" 2>&1 &
+echo "$!" > "$OUT.pid"
+```
+
+Then poll until the process exits, and read `$OUT`:
+
+```bash
+kill -0 "$(cat "$OUT.pid")" 2>/dev/null && echo RUNNING || echo DONE
+```
+
+Save `$OUT` as the artifact regardless of outcome. If it is still RUNNING when you
+must stop, report that and hand off the pid/out path rather than discarding it.
+
+## Artifacts
+
+Save every outside review:
+
+```text
+.jstack/artifacts/peer-review-<reviewer>-<mode>-<YYYYMMDDTHHMMSSZ>.md
+```
+
+Artifact format:
+
+```markdown
+# Peer Review: <mode>
+
+## Reviewer
+<codex|claude>
+
+## Prompt
+<exact prompt>
+
+## Raw Output
+<verbatim output>
+
+## Triage
+- Accepted:
+- Rejected:
+- Needs user decision:
+```
+
+Show raw reviewer output first, then a short triage. Do not implement accepted
+fixes unless the workflow has reached a step where edits are allowed.
+
+## Review Report
+
+When a spec, plan, or CURRENT file is active, add or update:
+
+```markdown
+## JSTACK REVIEW REPORT
+
+| Check | Reviewer | Runs | Status | Findings | Artifact |
+|---|---|---:|---|---|---|
+| Peer Review | <codex|claude> | 1 | <Pass|Issues Found> | <summary> | <path> |
+| Adversarial Review | <codex|claude> | 0 | Pending | - | - |
+```
+
+Preserve existing rows. Append missing rows. If no active file is obvious, only
+write the artifact and mention where it was saved.
+
+## Finding Triage
+
+External feedback is not an order. Before applying it:
+
+1. Verify the finding against code, tests, logs, or docs.
+2. Reject findings that contradict repo invariants or add unused scope.
+3. Escalate product, architecture, live-risk, or funding-impact decisions.
+4. Apply accepted fixes one at a time with targeted tests.
+
+For live trading, movement, signer, exchange, deployment, or credential changes,
+do not proceed from review to live execution without explicit user confirmation.
+
+hook: PostToolUse
+hook: PostToolUse Completed
+codex
+The peer-review skill normally launches an outside reviewer and writes an artifact/report; I’m not doing either because your explicit no-subagent, no-long-running-command, and no-edit constraints take precedence. I’ll perform the plan review directly against the named files.
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc 'nl -ba docs/jstack/specs/2026-07-20-adhd-integration-design.md
+find skills -maxdepth 2 -type f -print | sort
+find hooks/session-start commands -maxdepth 3 -type f -print | sort' in /Users/kakao1/.codex/jstack
+ succeeded in 0ms:
+     1	---
+     2	linear-issue: JEP-495
+     3	status: draft
+     4	---
+     5	
+     6	# i-have-adhd Output Contract 통합 + jstack 슬림화
+     7	
+     8	## 문제
+     9	
+    10	1. **출력 스타일이 사용자의 인지 패턴과 안 맞음.** 사용자는 ADHD가 있고(투약 중), 장황한 도입부·곁가지·마무리 인사가 섞인 출력은 핵심 행동을 묻히게 한다. [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd)(MIT)가 이 문제를 다루는 검증된 규칙 세트를 제공하지만, 매 메시지 skill 트리거 방식이라 적용이 불안정하고 사용자의 기존 패턴(Linear 상태관리, verdict-first, 한국어)과 통합돼 있지 않다.
+    11	2. **스킬 사용 실측과 구성이 불일치.** Claude Code 트랜스크립트 전수 검색 결과, 실제 Skill 툴 호출은 peer-review 8회 / brainstorming 2회 / project-management 1회 / using-git-worktrees 1회이고 **나머지 13개 스킬은 0회**다(Codex 세션은 로그 포맷상 호출 측정 불가 — 이 수치는 Claude Code 한정). 이는 (a) 중복·미사용 스킬이 목록 고정비만 차지하고 있으며, (b) 파이프라인 스킬의 트리거(description)가 약하다는 신호다.
+    12	
+    13	## 범위
+    14	
+    15	- **5.6.0 릴리스**: 워크스트림 1(스킬 정리) + 워크스트림 2(Output Contract). 저위험·additive.
+    16	- **5.7.0 릴리스**: 워크스트림 3(token diet). 5.6.0의 행동 효과를 관찰한 뒤 별도 진행 — 행동 회귀 시 원인 이분탐색이 가능하도록 릴리스를 분리한다.
+    17	
+    18	### Out of scope
+    19	
+    20	- **크로스 세션 재개 지원**(session-start에서 Linear In Progress 이슈 주입): ADHD 관점에서 세션 간 컨텍스트 단절이 더 큰 문제지만, 세션 시작 지연·네트워크 의존성·비Linear 프로젝트 노이즈 리스크로 이번에는 제외. 향후 별도 이슈로 검토.
+    21	- `architecture-deepening` 정리: 유지 결정.
+    22	- i-have-adhd 플러그인 자체 설치: 규칙 추출 방식으로 대체.
+    23	
+    24	## 워크스트림 1 — 스킬 정리 (5.6.0)
+    25	
+    26	1. **code-review 2종 병합**: `skills/requesting-code-review/`(66단어)와 `skills/receiving-code-review/`(882단어)의 규율 콘텐츠를 `skills/peer-review/SKILL.md` 내 섹션("리뷰 요청하기", "리뷰 피드백 받기")으로 흡수하고 두 디렉토리를 삭제한다. 병합 시 receiving의 핵심 규율(성과적 동의 금지, 기술적 검증 우선)은 유실 없이 유지한다.
+    27	2. **dispatching-parallel-agents 아카이브**: `skills/` 밖의 `archive/skills/dispatching-parallel-agents/`로 이동해 스킬 목록에서 제외한다. 네이티브 Agent/Workflow 툴과 기능 중복. 삭제가 아니므로 복원 가능.
+    28	3. **deprecated 커맨드 삭제**: `commands/brainstorm.md`, `commands/write-plan.md`, `commands/execute-plan.md` 삭제.
+    29	4. **상호 참조 갱신**: `rg "requesting-code-review|receiving-code-review|dispatching-parallel-agents" skills/ commands/ hooks/ docs/ *.md`로 전수 검색해 남은 참조를 peer-review 또는 네이티브 툴 언급으로 교체한다. 사용자 전역 설정(`~/.claude/CLAUDE.md`, rules/)의 참조는 이 repo 밖이므로 변경 사항을 사용자에게 보고만 한다.
+    30	
+    31	## 워크스트림 2 — ADHD Output Contract (5.6.0)
+    32	
+    33	`skills/using-jstack/SKILL.md` 하단에 **"Output Contract"** 섹션(~150단어, 영문)을 추가한다. session-start 훅이 이 파일 전문을 주입하므로(matcher: `startup|clear|compact`) 모든 하네스에서 세션당 1회 비용으로 상시 적용된다. 출처 크레딧: `<!-- Adapted from ayghri/i-have-adhd (MIT) -->`.
+    34	
+    35	### 적용 범위 (핵심 제약)
+    36	
+    37	Contract는 **대화형/상태 출력에만 적용**된다. 다음 아티팩트에는 적용하지 않는다고 명시한다: 스펙, 플랜, 문서, 커밋 메시지, 코드 주석, 리뷰 리포트. 이들은 소속 스킬(brainstorming, writing-plans 등)의 상세성 요구를 따른다.
+    38	
+    39	### 규칙 (원본 10규칙의 조정본)
+    40	
+    41	1. 결론/행동부터 시작 — 도입부·배경 설명 선행 금지 (기존 peer-review verdict-first와 일치).
+    42	2. 다단계 작업은 번호 매기기, 리스트는 5개 이하.
+    43	3. **다단계 작업 진행 중인 턴**의 끝에 "지금 위치 → 다음 단계" 1-2줄. Linear 연동 작업이면 이슈 ID 포함. 짧은 Q&A 턴에는 적용하지 않는다.
+    44	4. 곁가지 억제 — 요청받지 않은 부수 주제는 한 줄 언급 이하로.
+    45	5. 시간 추정 대신 규모 감각(S/M/L)과 다음 확인 지점 제시.
+    46	6. 오류·실패 시 담담한 어조, 자책·사과 반복 금지.
+    47	7. 마무리 인사·"도움이 되길 바랍니다"류 제거.
+    48	
+    49	### 예외 (원본의 예외 조항 유지 — 필수)
+    50	
+    51	사용자가 설명을 요청할 때, 모호성이 있어 질문이 필요할 때, 파괴적 행동 전 확인이 필요할 때는 규칙보다 해당 상황의 요구가 우선한다.
+    52	
+    53	## 워크스트림 3 — Token diet (5.7.0, 별도 릴리스)
+    54	
+    55	1. **description 재작성 — 목표는 축약이 아니라 트리거 품질.** 실측상 파이프라인 스킬 호출이 0회이므로, 남는 15개 스킬의 frontmatter description을 트리거 시나리오 기준으로 재작성한다. 짧아지는 것은 부산물이며, 트리거가 약한 스킬(writing-plans, verification-before-completion 등)은 오히려 트리거 문구가 늘 수 있다. `jstack:writing-skills`의 트리거 테스트 절차로 before/after 검증.
+    56	2. **brainstorming(4.8k 단어) core/references 분리.** 실호출 이력이 있고 세션 내 체류가 긴 유일한 대형 스킬. 분리 원칙: **행동 조형 콘텐츠(HARD-GATE, 체크리스트, 프로세스 플로우, 안티패턴)는 core에 유지**하고, 사례·템플릿·부록(visual-companion 상세 등)만 `references/`로 이동. superpowers의 "스킬은 행동 코드" 원칙에 따라 규율 콘텐츠를 optional read로 만들지 않는다.
+    57	3. systematic-debugging(5.2k) 분리는 선택 — brainstorming 분리 결과가 좋을 때만. writing-skills(11.7k)와 subagent-driven-development(5.4k)는 이번에 분리하지 않는다(호출 빈도 대비 효과 낮음, writing-skills는 본 작업의 거버넌스 문서).
+    58	4. 각 스킬 수정 후 `jstack:peer-review` 게이트 통과를 검증 조건으로 한다.
+    59	
+    60	## 검증
+    61	
+    62	- `bash hooks/session-start` 실행 → 출력 JSON이 유효하고 Output Contract 섹션이 포함되는지 확인 (`python3 -m json.tool`로 파싱).
+    63	- `tests/` 기존 테스트 통과.
+    64	- 상호 참조 전수 검색 결과 0건 (워크스트림 1의 삭제 대상 참조).
+    65	- 워크스트림별 커밋 분리, 5.6.0 / 5.7.0 버전 범프 + RELEASE-NOTES 갱신.
+    66	
+    67	## 리스크와 완화
+    68	
+    69	| 리스크 | 완화 |
+    70	|---|---|
+    71	| Contract가 스펙/플랜 상세성과 충돌 | 적용 범위를 대화형 출력으로 한정 + 예외 조항 명시 |
+    72	| description 재작성이 트리거를 더 약화 | 축약이 아닌 트리거 품질을 목표로, writing-skills 절차로 검증 |
+    73	| core/references 분리로 규율 콘텐츠가 안 읽힘 | 행동 조형 콘텐츠는 core 유지 원칙 명문화 |
+    74	| 행동 회귀 원인 추적 불가 | 5.6.0 / 5.7.0 릴리스 분리, 워크스트림별 커밋 |
+    75	
+    76	## JSTACK REVIEW REPORT
+    77	
+    78	- Self-review: 완료 (2026-07-20)
+    79	- Peer review: 대기
+skills/architecture-deepening/SKILL.md
+skills/architecture-deepening/deepening.md
+skills/architecture-deepening/interface-design.md
+skills/architecture-deepening/language.md
+skills/brainstorming/SKILL.md
+skills/brainstorming/adr-format.md
+skills/brainstorming/context-format.md
+skills/brainstorming/spec-document-reviewer-prompt.md
+skills/brainstorming/visual-companion.md
+skills/dispatching-parallel-agents/SKILL.md
+skills/executing-plans/SKILL.md
+skills/finishing-a-development-branch/SKILL.md
+skills/peer-review/SKILL.md
+skills/project-management/SKILL.md
+skills/receiving-code-review/SKILL.md
+skills/requesting-code-review/SKILL.md
+skills/simplest-thing/SKILL.md
+skills/subagent-driven-development/SKILL.md
+skills/subagent-driven-development/code-quality-reviewer-prompt.md
+skills/subagent-driven-development/code-reviewer.md
+skills/subagent-driven-development/implementer-prompt.md
+skills/subagent-driven-development/spec-reviewer-prompt.md
+skills/systematic-debugging/CREATION-LOG.md
+skills/systematic-debugging/SKILL.md
+skills/systematic-debugging/condition-based-waiting-example.ts
+skills/systematic-debugging/condition-based-waiting.md
+skills/systematic-debugging/defense-in-depth.md
+skills/systematic-debugging/find-polluter.sh
+skills/systematic-debugging/root-cause-tracing.md
+skills/systematic-debugging/test-academic.md
+skills/systematic-debugging/test-pressure-1.md
+skills/systematic-debugging/test-pressure-2.md
+skills/systematic-debugging/test-pressure-3.md
+skills/test-driven-development/SKILL.md
+skills/test-driven-development/testing-anti-patterns.md
+skills/using-git-worktrees/SKILL.md
+skills/using-jstack/SKILL.md
+skills/verification-before-completion/SKILL.md
+skills/writing-plans/SKILL.md
+skills/writing-plans/agent-brief-template.md
+skills/writing-plans/plan-document-reviewer-prompt.md
+skills/writing-skills/SKILL.md
+skills/writing-skills/anthropic-best-practices.md
+skills/writing-skills/graphviz-conventions.dot
+skills/writing-skills/persuasion-principles.md
+skills/writing-skills/render-graphs.js
+skills/writing-skills/testing-skills-with-subagents.md
+commands/brainstorm.md
+commands/execute-plan.md
+commands/write-plan.md
+hooks/session-start
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc 'nl -ba hooks/session-start
+for f in commands/*.md; do nl -ba "$f"; done
+rg -n --hidden --glob '"'"'!docs/jstack/specs/2026-07-20-adhd-integration-design.md'"' 'requesting-code-review|receiving-code-review|dispatching-parallel-agents|brainstorm\\.md|write-plan\\.md|execute-plan\\.md|session-start|using-jstack|version|RELEASE-NOTES' skills commands hooks docs '*.md' 2>/dev/null || true
+find . -maxdepth 2 -type f -print | sort" in /Users/kakao1/.codex/jstack
+ succeeded in 0ms:
+     1	#!/usr/bin/env bash
+     2	# SessionStart hook for superpowers plugin
+     3	
+     4	set -euo pipefail
+     5	
+     6	# Determine plugin root directory
+     7	SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+     8	PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+     9	
+    10	# Check if legacy skills directory exists and build warning
+    11	warning_message=""
+    12	legacy_skills_dir="${HOME}/.config/superpowers/skills"
+    13	if [ -d "$legacy_skills_dir" ]; then
+    14	    warning_message="\n\n<important-reminder>IN YOUR FIRST REPLY AFTER SEEING THIS MESSAGE YOU MUST TELL THE USER:⚠️ **WARNING:** Superpowers now uses Claude Code's skills system. Custom skills in ~/.config/superpowers/skills will not be read. Move custom skills to ~/.claude/skills instead. To make this message go away, remove ~/.config/superpowers/skills</important-reminder>"
+    15	fi
+    16	
+    17	# Read using-jstack content
+    18	using_jstack_content=$(cat "${PLUGIN_ROOT}/skills/using-jstack/SKILL.md" 2>&1 || echo "Error reading using-jstack skill")
+    19	
+    20	# Escape string for JSON embedding using bash parameter substitution.
+    21	# Each ${s//old/new} is a single C-level pass - orders of magnitude
+    22	# faster than the character-by-character loop this replaces.
+    23	escape_for_json() {
+    24	    local s="$1"
+    25	    s="${s//\\/\\\\}"
+    26	    s="${s//\"/\\\"}"
+    27	    s="${s//$'\n'/\\n}"
+    28	    s="${s//$'\r'/\\r}"
+    29	    s="${s//$'\t'/\\t}"
+    30	    printf '%s' "$s"
+    31	}
+    32	
+    33	using_jstack_escaped=$(escape_for_json "$using_jstack_content")
+    34	warning_escaped=$(escape_for_json "$warning_message")
+    35	session_context="<EXTREMELY_IMPORTANT>\nYou have jstack superpowers.\n\n**Below is the full content of your 'jstack:using-jstack' skill - your introduction to using skills. For all other skills, use the 'Skill' tool:**\n\n${using_jstack_escaped}\n\n${warning_escaped}\n</EXTREMELY_IMPORTANT>"
+    36	
+    37	# Output context injection as JSON.
+    38	# Cursor hooks expect additional_context (snake_case).
+    39	# Claude Code hooks expect hookSpecificOutput.additionalContext (nested).
+    40	# Copilot CLI (v1.0.11+) and others expect additionalContext (top-level, SDK standard).
+    41	# Claude Code reads BOTH additional_context and hookSpecificOutput without
+    42	# deduplication, so we must emit only the field the current platform consumes.
+    43	#
+    44	# Uses printf instead of heredoc to work around bash 5.3+ heredoc hang.
+    45	# See: https://github.com/obra/superpowers/issues/571
+    46	if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then
+    47	  # Cursor sets CURSOR_PLUGIN_ROOT (may also set CLAUDE_PLUGIN_ROOT)
+    48	  printf '{\n  "additional_context": "%s"\n}\n' "$session_context"
+    49	elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then
+    50	  # Claude Code sets CLAUDE_PLUGIN_ROOT without COPILOT_CLI
+    51	  printf '{\n  "hookSpecificOutput": {\n    "hookEventName": "SessionStart",\n    "additionalContext": "%s"\n  }\n}\n' "$session_context"
+    52	else
+    53	  # Copilot CLI (sets COPILOT_CLI=1) or unknown platform — SDK standard format
+    54	  printf '{\n  "additionalContext": "%s"\n}\n' "$session_context"
+    55	fi
+    56	
+    57	exit 0
+     1	---
+     2	description: "Deprecated - use the jstack:brainstorming skill instead"
+     3	---
+     4	
+     5	Tell your human partner that this command is deprecated and will be removed in the next major release. They should ask you to use the "jstack brainstorming" skill instead.
+     1	---
+     2	description: "Deprecated - use the jstack:executing-plans skill instead"
+     3	---
+     4	
+     5	Tell your human partner that this command is deprecated and will be removed in the next major release. They should ask you to use the "jstack executing-plans" skill instead.
+     1	---
+     2	description: "Deprecated - use the jstack:writing-plans skill instead"
+     3	---
+     4	
+     5	Tell your human partner that this command is deprecated and will be removed in the next major release. They should ask you to use the "jstack writing-plans" skill instead.
+docs/README.opencode.md:83:To pin a specific version, use a branch or tag:
+docs/README.opencode.md:113:3. Make sure you're running a recent version of OpenCode
+docs/README.opencode.md:123:1. Check OpenCode version supports `experimental.chat.system.transform` hook
+hooks/session-start:17:# Read using-jstack content
+hooks/session-start:18:using_jstack_content=$(cat "${PLUGIN_ROOT}/skills/using-jstack/SKILL.md" 2>&1 || echo "Error reading using-jstack skill")
+hooks/session-start:35:[Omitted long matching line]
+docs/superpowers/specs/2026-03-23-codex-app-compatibility-design.md:200:- `dispatching-parallel-agents/SKILL.md` — no worktree or finishing operations
+hooks/hooks-cursor.json:2:  "version": 1,
+hooks/hooks-cursor.json:6:        "command": "./hooks/session-start"
+docs/README.codex.md:35:4. **For subagent skills** (optional): Skills like `dispatching-parallel-agents` and `subagent-driven-development` require Codex's multi-agent feature. Add to your Codex config:
+docs/README.codex.md:58:The `using-jstack` skill is discovered automatically and enforces skill usage discipline — no additional configuration needed.
+docs/README.codex.md:65:- The `using-jstack` skill directs Codex to use one
+hooks/run-hook.cmd:7:REM Hook scripts use extensionless filenames (e.g. "session-start" not
+hooks/run-hook.cmd:8:REM "session-start.sh") so Claude Code's Windows auto-detection -- which
+skills/peer-review/SKILL.md:136:command -v codex >/dev/null 2>&1 && codex --version
+skills/peer-review/SKILL.md:137:command -v claude >/dev/null 2>&1 && claude --version
+hooks/hooks.json:9:            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" session-start",
+skills/using-jstack/SKILL.md:2:name: using-jstack
+skills/using-jstack/SKILL.md:90:| "I remember this skill" | Skills evolve. Read current version. |
+skills/requesting-code-review/SKILL.md:2:name: requesting-code-review
+skills/project-management/SKILL.md:151:  improvise a degraded version from repo artifacts.
+skills/simplest-thing/SKILL.md:89:  full version, build it, no re-arguing.
+skills/dispatching-parallel-agents/SKILL.md:2:name: dispatching-parallel-agents
+skills/using-jstack/references/gemini-tools.md:21:[Omitted long matching line]
+docs/plans/2025-11-28-skills-improvements-from-user-feedback.md:390:### 5. requesting-code-review: Add Explicit File Reading
+docs/plans/2025-11-28-skills-improvements-from-user-feedback.md:577:3. **requesting-code-review: Explicit file reading**
+docs/plans/2025-11-28-skills-improvements-from-user-feedback.md:580:   - File: `skills/requesting-code-review/SKILL.md`
+docs/plans/2025-11-28-skills-improvements-from-user-feedback.md:700:- requesting-code-review: Explicit file reading
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:24:| dispatching-parallel-agents | **0** | CLAUDE.md mandates parallelism; 0 parallel agent batches observed |
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:47:[Omitted long matching line]
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:50:- Consolidate review skills: absorb the unique parts of `requesting-code-review` into `peer-review`.
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:70:- **References stay valid:** when `requesting-code-review` is slimmed to a redirect, every inbound reference must be updated in the same change.
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:73:  - `requesting-code-review`: must still contain `jstack:` (the redirect's `jstack:peer-review` satisfies this).
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:89:[Omitted long matching line]
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:98:| 6 | `skills/dispatching-parallel-agents/SKILL.md` | skill | ②, ⑥ |
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:100:| 8 | `skills/requesting-code-review/SKILL.md` | skill | ④ (slim to redirect) |
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:104:| 12 | `skills/receiving-code-review/SKILL.md` | skill | ⑥ |
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:105:| 13 | `skills/using-jstack/references/codex-tools.md` | pointer | ④ reference repoint |
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:108:[Omitted long matching line]
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:130:[Omitted long matching line]
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:131:- **dispatching-parallel-agents** `## When to Use`: add "auto-triggered when a plan tags tasks `parallel-safe`" to lower the activation threshold.
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:137:### ④ requesting-code-review → peer-review absorption (token-tight)
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:138:- Identify what `requesting-code-review` has that `peer-review` lacks: `When to Request` (trigger conditions) and `Red Flags` (review-avoidance rationalizations).
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:140:[Omitted long matching line]
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:144:[Omitted long matching line]
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:161:[Omitted long matching line]
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:162:[Omitted long matching line]
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:168:   - `dispatching-parallel-agents` — ② auto-trigger note + ⑥ diet.
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:171:   - `receiving-code-review` — ⑥ diet.
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:179:[Omitted long matching line]
+docs/jstack/specs/2026-05-29-jstack-backend-hardening-token-diet-design.md:181:[Omitted long matching line]
+docs/superpowers/plans/2026-02-19-visual-brainstorming-refactor.md:225:Replace the click handler (lines 36-55) with a narrower version:
+docs/superpowers/plans/2026-02-19-visual-brainstorming-refactor.md:513:[Omitted long matching line]
+docs/plans/2026-01-17-visual-brainstorming.md:24:  "version": "1.0.0",
+docs/plans/2026-01-17-visual-brainstorming.md:275:  "version": "1.0.0",
+skills/using-jstack/references/codex-tools.md:25:This enables `spawn_agent`, `wait`, and `close_agent` for skills like `dispatching-parallel-agents` and `subagent-driven-development`.
+skills/subagent-driven-development/SKILL.md:74:When consecutive plan tasks are tagged `parallel-safe` and share no files or state, dispatch them concurrently in one batch via jstack:dispatching-parallel-agents — do not run them sequentially.
+docs/plans/2025-11-22-opencode-support-design.md:258:3. Update RELEASE-NOTES
+skills/brainstorming/visual-companion.md:264:- **Iterate before advancing** — if feedback changes current screen, write a new version
+skills/brainstorming/visual-companion.md:273:- For iterations: append version suffix like `layout-v2.html`, `layout-v3.html`
+skills/receiving-code-review/SKILL.md:2:name: receiving-code-review
+skills/receiving-code-review/SKILL.md:67:  4. Check: Works on all platforms/versions?
+docs/plans/2025-11-22-opencode-support-implementation.md:863:3. Verify Node.js is installed: `node --version`
+docs/plans/2025-11-22-opencode-support-implementation.md:939:- Modify: `RELEASE-NOTES.md`
+docs/plans/2025-11-22-opencode-support-implementation.md:968:Run: `head -30 RELEASE-NOTES.md`
+docs/plans/2025-11-22-opencode-support-implementation.md:974:git add RELEASE-NOTES.md
+docs/plans/2025-11-22-opencode-support-implementation.md:1061:- Files modified: `.codex/superpowers-codex`, `README.md`, `RELEASE-NOTES.md`
+docs/plans/2025-11-22-opencode-support-implementation.md:1093:- [ ] README and RELEASE-NOTES updated
+docs/jstack/plans/2026-07-02-simplest-thing.md:60:shortest version wins.
+docs/jstack/plans/2026-07-02-simplest-thing.md:76:## S4 — Full-version insistence
+docs/jstack/plans/2026-07-02-simplest-thing.md:201:  full version, build it, no re-arguing.
+docs/jstack/plans/2026-07-02-simplest-thing.md:626:| S4 | Turn 2 builds the full version with no re-arguing |
+skills/systematic-debugging/SKILL.md:119:   **Quick version:**
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:61:## Task 2: peer-review absorb + requesting-code-review redirect  (④, ⑥)
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:65:- Modify: `skills/requesting-code-review/SKILL.md`
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:69:[Omitted long matching line]
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:88:[Omitted long matching line]
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:96:[Omitted long matching line]
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:98:**Acceptance:** static contract PASS; peer-review has the absorbed sections; requesting-code-review is a redirect retaining `jstack:peer-review`.
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:105:- Modify: `skills/using-jstack/references/codex-tools.md`
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:110:[Omitted long matching line]
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:112:[Omitted long matching line]
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:114:[Omitted long matching line]
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:175:When consecutive plan tasks are tagged `parallel-safe` and share no files or state, dispatch them concurrently in one batch via jstack:dispatching-parallel-agents — do not run them sequentially.
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:192:[Omitted long matching line]
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:234:## Task 8: dispatching-parallel-agents — auto-trigger note + diet  (②⑥)  [parallel-safe]
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:237:- Modify: `skills/dispatching-parallel-agents/SKILL.md`
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:247:- [ ] **Step 3: Verify** — Run: `grep -c "Auto-triggered" skills/dispatching-parallel-agents/SKILL.md` → `1`. Run: `bash tests/jstack-static/run.sh` → `[PASS]`.
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:297:## Task 11: receiving-code-review — diet  (⑥)  [parallel-safe]
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:300:- Modify: `skills/receiving-code-review/SKILL.md`
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:320:- [ ] **Step 4: Reference integrity** — Run: `grep -rl "requesting-code-review" skills/` → only the redirect file.
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:324:[Omitted long matching line]
+docs/jstack/plans/2026-05-29-jstack-backend-hardening.md:334:- requesting-code-review consolidated into peer-review
+skills/writing-skills/anthropic-best-practices.md:57:The concise version assumes Claude knows what PDFs are and how libraries work.
+skills/writing-skills/anthropic-best-practices.md:673:fix(reports): correct date formatting in timezone conversion
+docs/windows/polyglot-hooks.md:25:"C:\Program Files\Git\bin\bash.exe" -l -c "\"$(cygpath -u \"$CLAUDE_PLUGIN_ROOT\")/hooks/session-start.sh\""
+docs/windows/polyglot-hooks.md:30:"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh"
+docs/windows/polyglot-hooks.md:57:├── session-start.cmd    # Polyglot wrapper (cross-platform entry point)
+docs/windows/polyglot-hooks.md:58:└── session-start.sh     # Actual hook logic (bash script)
+docs/windows/polyglot-hooks.md:72:            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.cmd\""
+docs/windows/polyglot-hooks.md:167:            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" session-start.sh"
+docs/windows/polyglot-hooks.md:205:cmd /c "C:\path\to\plugin\hooks\session-start.cmd"
+./.claude-plugin/marketplace.json
+./.claude-plugin/plugin.json
+./.codex/INSTALL.md
+./.cursor-plugin/plugin.json
+./.git/COMMIT_EDITMSG
+./.git/FETCH_HEAD
+./.git/HEAD
+./.git/ORIG_HEAD
+./.git/config
+./.git/description
+./.git/index
+./.git/packed-refs
+./.git/sg-hook-once-toolu_019LdhUhUZrEbWmwwvcA4aRh
+./.git/sg-reviewed-shas
+./.gitattributes
+./.github/FUNDING.yml
+./.github/PULL_REQUEST_TEMPLATE.md
+./.gitignore
+./.opencode/INSTALL.md
+./.version-bump.json
+./CLAUDE.md
+./CODE_OF_CONDUCT.md
+./GEMINI.md
+./LICENSE
+./README.md
+./RELEASE-NOTES.md
+./commands/brainstorm.md
+./commands/execute-plan.md
+./commands/write-plan.md
+./docs/README.codex.md
+./docs/README.opencode.md
+./docs/testing.md
+./gemini-extension.json
+./hooks/hooks-cursor.json
+./hooks/hooks.json
+./hooks/run-hook.cmd
+./hooks/session-start
+./package.json
+./scripts/bump-version.sh
+./scripts/find-linear-issue.sh
+./scripts/sync-local-hosts.sh
+./scripts/sync-to-codex-plugin.sh
+
+hook: PostToolUse
+hook: PostToolUse Completed
+codex
+One material mismatch is already visible: the spec’s “all harnesses” delivery claim depends on hook registration and host behavior that `hooks/session-start` itself does not establish. I’m checking the in-scope references and test coverage next so the final findings stay evidence-based.
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "nl -ba hooks/hooks.json
+nl -ba hooks/hooks-cursor.json
+nl -ba .claude-plugin/plugin.json
+nl -ba .cursor-plugin/plugin.json
+nl -ba gemini-extension.json
+nl -ba .codex/INSTALL.md | sed -n '1,180p'
+nl -ba docs/README.codex.md | sed -n '1,130p'
+find tests -maxdepth 3 -type f -print | sort 2>/dev/null || true
+rg -n 'commands/|brainstorm|write-plan|execute-plan|requesting-code-review|receiving-code-review|dispatching-parallel-agents|using-jstack|session-start' tests skills commands hooks --glob '"'!skills/using-jstack/SKILL.md'"' --glob '"'!skills/peer-review/SKILL.md'"'" in /Users/kakao1/.codex/jstack
+ succeeded in 0ms:
+     1	{
+     2	  "hooks": {
+     3	    "SessionStart": [
+     4	      {
+     5	        "matcher": "startup|clear|compact",
+     6	        "hooks": [
+     7	          {
+     8	            "type": "command",
+     9	            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" session-start",
+    10	            "async": false
+    11	          }
+    12	        ]
+    13	      }
+    14	    ]
+    15	  }
+    16	}
+     1	{
+     2	  "version": 1,
+     3	  "hooks": {
+     4	    "sessionStart": [
+     5	      {
+     6	        "command": "./hooks/session-start"
+     7	      }
+     8	    ]
+     9	  }
+    10	}
+     1	{
+     2	  "name": "jstack",
+     3	  "description": "Local skills library for Claude Code and Codex: planning, TDD, peer review, debugging, and delivery workflows",
+     4	  "version": "5.5.1",
+     5	  "author": {
+     6	    "name": "jerry"
+     7	  },
+     8	  "homepage": "https://github.com/jungsooyun/jstack",
+     9	  "repository": "https://github.com/jungsooyun/jstack",
+    10	  "license": "MIT",
+    11	  "keywords": [
+    12	    "skills",
+    13	    "tdd",
+    14	    "debugging",
+    15	    "collaboration",
+    16	    "best-practices",
+    17	    "workflows",
+    18	    "peer-review"
+    19	  ]
+    20	}
+     1	{
+     2	  "name": "jstack",
+     3	  "displayName": "JStack",
+     4	  "description": "Local skills library: planning, TDD, peer review, debugging, and delivery workflows",
+     5	  "version": "5.5.1",
+     6	  "author": {
+     7	    "name": "jerry"
+     8	  },
+     9	  "homepage": "https://github.com/jungsooyun/jstack",
+    10	  "repository": "https://github.com/jungsooyun/jstack",
+    11	  "license": "MIT",
+    12	  "keywords": [
+    13	    "skills",
+    14	    "tdd",
+    15	    "debugging",
+    16	    "collaboration",
+    17	    "best-practices",
+    18	    "workflows"
+    19	  ],
+    20	  "skills": "./skills/",
+    21	  "agents": "./agents/",
+    22	  "commands": "./commands/",
+    23	  "hooks": "./hooks/hooks-cursor.json"
+    24	}
+     1	{
+     2	  "name": "jstack",
+     3	  "description": "Local skills library: planning, TDD, peer review, debugging, and delivery workflows",
+     4	  "version": "5.5.1",
+     5	  "contextFileName": "GEMINI.md"
+     6	}
+     1	# Installing JStack for Codex
+     2	
+     3	Enable JStack skills in Codex via native skill discovery. Clone once, then symlink.
+     4	
+     5	## Prerequisites
+     6	
+     7	- Git
+     8	
+     9	## Installation
+    10	
+    11	1. **Clone the JStack repository:**
+    12	   ```bash
+    13	   git clone https://github.com/jungsooyun/jstack.git ~/.codex/jstack
+    14	   ```
+    15	
+    16	2. **Create the skills symlink:**
+    17	   ```bash
+    18	   mkdir -p ~/.codex/skills ~/.agents/skills
+    19	   ln -s ~/.codex/jstack/skills ~/.codex/skills/jstack
+    20	   ln -s ~/.codex/jstack/skills ~/.agents/skills/jstack
+    21	   ```
+    22	
+    23	   **Windows (PowerShell):**
+    24	   ```powershell
+    25	   New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.codex\skills"
+    26	   New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.agents\skills"
+    27	   cmd /c mklink /J "$env:USERPROFILE\.codex\skills\jstack" "$env:USERPROFILE\.codex\jstack\skills"
+    28	   cmd /c mklink /J "$env:USERPROFILE\.agents\skills\jstack" "$env:USERPROFILE\.codex\jstack\skills"
+    29	   ```
+    30	
+    31	3. **Restart Codex** (quit and relaunch the CLI) to discover the skills.
+    32	
+    33	## Migrating from Superpowers
+    34	
+    35	If you installed Superpowers before JStack, keep the compatibility alias until all
+    36	project guidance has been updated:
+    37	
+    38	1. **Rename or clone the repo:**
+    39	   ```bash
+    40	   mv ~/.codex/superpowers ~/.codex/jstack
+    41	   ln -s ~/.codex/jstack ~/.codex/superpowers
+    42	   ```
+    43	
+    44	2. **Create the new skills symlinks** (step 2 above).
+    45	
+    46	3. **Optional compatibility alias:**
+    47	   ```bash
+    48	   ln -s ~/.codex/jstack/skills ~/.codex/skills/superpowers
+    49	   ```
+    50	
+    51	4. **Restart Codex.**
+    52	
+    53	## Verify
+    54	
+    55	```bash
+    56	ls -la ~/.codex/skills/jstack ~/.agents/skills/jstack
+    57	```
+    58	
+    59	You should see symlinks (or junctions on Windows) pointing to your JStack skills directory.
+    60	
+    61	## Updating
+    62	
+    63	```bash
+    64	cd ~/.codex/jstack && git pull
+    65	```
+    66	
+    67	Skills update instantly through the symlink.
+    68	
+    69	## Uninstalling
+    70	
+    71	```bash
+    72	rm ~/.codex/skills/jstack ~/.agents/skills/jstack
+    73	```
+    74	
+    75	Optionally delete the clone: `rm -rf ~/.codex/jstack`.
+     1	# Superpowers for Codex
+     2	
+     3	Guide for using Superpowers with OpenAI Codex via native skill discovery.
+     4	
+     5	## Quick Install
+     6	
+     7	Tell Codex:
+     8	
+     9	```
+    10	Fetch and follow instructions from https://raw.githubusercontent.com/obra/superpowers/refs/heads/main/.codex/INSTALL.md
+    11	```
+    12	
+    13	## Manual Installation
+    14	
+    15	### Prerequisites
+    16	
+    17	- OpenAI Codex CLI
+    18	- Git
+    19	
+    20	### Steps
+    21	
+    22	1. Clone the repo:
+    23	   ```bash
+    24	   git clone https://github.com/obra/superpowers.git ~/.codex/superpowers
+    25	   ```
+    26	
+    27	2. Create the skills symlink:
+    28	   ```bash
+    29	   mkdir -p ~/.agents/skills
+    30	   ln -s ~/.codex/superpowers/skills ~/.agents/skills/superpowers
+    31	   ```
+    32	
+    33	3. Restart Codex.
+    34	
+    35	4. **For subagent skills** (optional): Skills like `dispatching-parallel-agents` and `subagent-driven-development` require Codex's multi-agent feature. Add to your Codex config:
+    36	   ```toml
+    37	   [features]
+    38	   multi_agent = true
+    39	   ```
+    40	
+    41	### Windows
+    42	
+    43	Use a junction instead of a symlink (works without Developer Mode):
+    44	
+    45	```powershell
+    46	New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.agents\skills"
+    47	cmd /c mklink /J "$env:USERPROFILE\.agents\skills\superpowers" "$env:USERPROFILE\.codex\superpowers\skills"
+    48	```
+    49	
+    50	## How It Works
+    51	
+    52	Codex has native skill discovery — it scans `~/.agents/skills/` at startup, parses SKILL.md frontmatter, and loads skills on demand. Superpowers skills are made visible through a single symlink:
+    53	
+    54	```
+    55	~/.agents/skills/superpowers/ → ~/.codex/superpowers/skills/
+    56	```
+    57	
+    58	The `using-jstack` skill is discovered automatically and enforces skill usage discipline — no additional configuration needed.
+    59	
+    60	## Usage
+    61	
+    62	Skills are discovered automatically. Codex activates them when:
+    63	- You mention a skill by name (e.g., "use brainstorming")
+    64	- The task matches a skill's description
+    65	- The `using-jstack` skill directs Codex to use one
+    66	
+    67	### Personal Skills
+    68	
+    69	Create your own skills in `~/.agents/skills/`:
+    70	
+    71	```bash
+    72	mkdir -p ~/.agents/skills/my-skill
+    73	```
+    74	
+    75	Create `~/.agents/skills/my-skill/SKILL.md`:
+    76	
+    77	```markdown
+    78	---
+    79	name: my-skill
+    80	description: Use when [condition] - [what it does]
+    81	---
+    82	
+    83	# My Skill
+    84	
+    85	[Your skill content here]
+    86	```
+    87	
+    88	The `description` field is how Codex decides when to activate a skill automatically — write it as a clear trigger condition.
+    89	
+    90	## Updating
+    91	
+    92	```bash
+    93	cd ~/.codex/superpowers && git pull
+    94	```
+    95	
+    96	Skills update instantly through the symlink.
+    97	
+    98	## Uninstalling
+    99	
+   100	```bash
+   101	rm ~/.agents/skills/superpowers
+   102	```
+   103	
+   104	**Windows (PowerShell):**
+   105	```powershell
+   106	Remove-Item "$env:USERPROFILE\.agents\skills\superpowers"
+   107	```
+   108	
+   109	Optionally delete the clone: `rm -rf ~/.codex/superpowers` (Windows: `Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\superpowers"`).
+   110	
+   111	## Troubleshooting
+   112	
+   113	### Skills not showing up
+   114	
+   115	1. Verify the symlink: `ls -la ~/.agents/skills/superpowers`
+   116	2. Check skills exist: `ls ~/.codex/superpowers/skills`
+   117	3. Restart Codex — skills are discovered at startup
+   118	
+   119	### Windows junction issues
+   120	
+   121	Junctions normally work without special permissions. If creation fails, try running PowerShell as administrator.
+   122	
+   123	## Getting Help
+   124	
+   125	- Report issues: https://github.com/obra/superpowers/issues
+   126	- Main documentation: https://github.com/obra/superpowers
+tests/brainstorm-server/package-lock.json
+tests/brainstorm-server/package.json
+tests/brainstorm-server/server.test.js
+tests/brainstorm-server/windows-lifecycle.test.sh
+tests/brainstorm-server/ws-protocol.test.js
+tests/claude-code/README.md
+tests/claude-code/analyze-token-usage.py
+tests/claude-code/run-skill-tests.sh
+tests/claude-code/test-document-review-system.sh
+tests/claude-code/test-helpers.sh
+tests/claude-code/test-subagent-driven-development-integration.sh
+tests/claude-code/test-subagent-driven-development.sh
+tests/explicit-skill-requests/prompts/action-oriented.txt
+tests/explicit-skill-requests/prompts/after-planning-flow.txt
+tests/explicit-skill-requests/prompts/claude-suggested-it.txt
+tests/explicit-skill-requests/prompts/i-know-what-sdd-means.txt
+tests/explicit-skill-requests/prompts/mid-conversation-execute-plan.txt
+tests/explicit-skill-requests/prompts/please-use-brainstorming.txt
+tests/explicit-skill-requests/prompts/skip-formalities.txt
+tests/explicit-skill-requests/prompts/subagent-driven-development-please.txt
+tests/explicit-skill-requests/prompts/use-systematic-debugging.txt
+tests/explicit-skill-requests/run-all.sh
+tests/explicit-skill-requests/run-claude-describes-sdd.sh
+tests/explicit-skill-requests/run-extended-multiturn-test.sh
+tests/explicit-skill-requests/run-haiku-test.sh
+tests/explicit-skill-requests/run-multiturn-test.sh
+tests/explicit-skill-requests/run-test.sh
+tests/find-linear-issue/test.sh
+tests/jstack-static/run.sh
+tests/opencode/run-tests.sh
+tests/opencode/setup.sh
+tests/opencode/test-plugin-loading.sh
+tests/opencode/test-priority.sh
+tests/opencode/test-tools.sh
+tests/skill-triggering/prompts/dispatching-parallel-agents.txt
+tests/skill-triggering/prompts/executing-plans.txt
+tests/skill-triggering/prompts/requesting-code-review.txt
+tests/skill-triggering/prompts/systematic-debugging.txt
+tests/skill-triggering/prompts/test-driven-development.txt
+tests/skill-triggering/prompts/writing-plans.txt
+tests/skill-triggering/run-all.sh
+tests/skill-triggering/run-test.sh
+tests/subagent-driven-dev/go-fractals/design.md
+tests/subagent-driven-dev/go-fractals/plan.md
+tests/subagent-driven-dev/go-fractals/scaffold.sh
+tests/subagent-driven-dev/run-test.sh
+tests/subagent-driven-dev/svelte-todo/design.md
+tests/subagent-driven-dev/svelte-todo/plan.md
+tests/subagent-driven-dev/svelte-todo/scaffold.sh
+hooks/hooks.json:9:            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" session-start",
+commands/brainstorm.md:2:description: "Deprecated - use the jstack:brainstorming skill instead"
+commands/brainstorm.md:5:Tell your human partner that this command is deprecated and will be removed in the next major release. They should ask you to use the "jstack brainstorming" skill instead.
+hooks/hooks-cursor.json:6:        "command": "./hooks/session-start"
+hooks/run-hook.cmd:7:REM Hook scripts use extensionless filenames (e.g. "session-start" not
+hooks/run-hook.cmd:8:REM "session-start.sh") so Claude Code's Windows auto-detection -- which
+hooks/session-start:17:# Read using-jstack content
+hooks/session-start:18:using_jstack_content=$(cat "${PLUGIN_ROOT}/skills/using-jstack/SKILL.md" 2>&1 || echo "Error reading using-jstack skill")
+hooks/session-start:35:[Omitted long matching line]
+skills/subagent-driven-development/SKILL.md:27:    "Manual execution or brainstorm first" [shape=box];
+skills/subagent-driven-development/SKILL.md:30:    "Have implementation plan?" -> "Manual execution or brainstorm first" [label="no"];
+skills/subagent-driven-development/SKILL.md:32:    "Can tasks be sliced for agent execution?" -> "Manual execution or brainstorm first" [label="no - tightly coupled/unclear"];
+skills/subagent-driven-development/SKILL.md:74:When consecutive plan tasks are tagged `parallel-safe` and share no files or state, dispatch them concurrently in one batch via jstack:dispatching-parallel-agents — do not run them sequentially.
+tests/jstack-static/run.sh:30:grep -q "docs/jstack/specs" skills/brainstorming/SKILL.md || fail "brainstorming must write specs under docs/jstack/specs"
+tests/jstack-static/run.sh:31:grep -q "Problem Framing Gate" skills/brainstorming/SKILL.md || fail "brainstorming must include Problem Framing Gate"
+tests/jstack-static/run.sh:36:grep -q "jstack:peer-review plan" skills/brainstorming/SKILL.md || fail "brainstorming must route specs through peer-review"
+tests/jstack-static/run.sh:37:grep -q "CONTEXT.md" skills/brainstorming/SKILL.md || fail "brainstorming must include lazy domain context guidance"
+tests/jstack-static/run.sh:38:grep -q "ADR" skills/brainstorming/SKILL.md || fail "brainstorming must include lazy ADR guidance"
+tests/jstack-static/run.sh:42:[Omitted long matching line]
+tests/jstack-static/run.sh:46:grep -q "jstack:" skills/requesting-code-review/SKILL.md || fail "requesting-code-review must reference jstack skill namespace"
+tests/jstack-static/run.sh:49:[[ -f skills/brainstorming/context-format.md ]] || fail "brainstorming must include CONTEXT.md format reference"
+tests/jstack-static/run.sh:50:[[ -f skills/brainstorming/adr-format.md ]] || fail "brainstorming must include ADR format reference"
+skills/using-jstack/references/gemini-tools.md:21:[Omitted long matching line]
+skills/using-jstack/references/codex-tools.md:25:This enables `spawn_agent`, `wait`, and `close_agent` for skills like `dispatching-parallel-agents` and `subagent-driven-development`.
+skills/project-management/SKILL.md:3:[Omitted long matching line]
+skills/project-management/SKILL.md:13:the vertical brainstorm → spec → plan → execute pipeline does not cover.
+skills/project-management/SKILL.md:20:task — it goes straight to `jstack:brainstorming`. See the Red Flags table.
+skills/project-management/SKILL.md:49:mid-brainstorm.
+skills/project-management/SKILL.md:74:"우선순위 높은 것부터 추천해줘", or a brainstorming entry where the build target
+skills/project-management/SKILL.md:85:4. On the user's selection, hand off to `jstack:brainstorming` with the chosen
+skills/project-management/SKILL.md:86:   issue as context and carry the **issue ID** so brainstorming can link the
+skills/project-management/SKILL.md:91:implementing — the next step is brainstorming, not code.
+skills/project-management/SKILL.md:160:| The feature request is already clear ("build X", "X 기능 만들어줘") | Don't detour here — go straight to `jstack:brainstorming` |
+skills/project-management/SKILL.md:170:- **next** hands off to `jstack:brainstorming` with the chosen issue.
+skills/project-management/SKILL.md:171:- `jstack:brainstorming` calls **capture** conventions to create the spec's
+tests/opencode/test-tools.sh:39:if echo "$output" | grep -qi "jstack:brainstorming\|jstack:using-jstack\|Available skills"; then
+tests/opencode/test-tools.sh:82:echo "  Running opencode with jstack:brainstorming skill..."
+tests/opencode/test-tools.sh:84:output=$(timeout 60s opencode run --print-logs "Use the use_skill tool to load jstack:brainstorming and tell me the first few lines of what you received." 2>&1) || {
+tests/opencode/test-tools.sh:93:# Check for expected content from brainstorming skill
+tests/opencode/test-tools.sh:94:if echo "$output" | grep -qi "brainstorming\|Launching skill\|skill.*loaded"; then
+tests/opencode/test-tools.sh:95:    echo "  [PASS] use_skill loaded jstack:brainstorming skill"
+tests/opencode/test-tools.sh:97:    echo "  [FAIL] use_skill did not load jstack:brainstorming correctly"
+skills/dispatching-parallel-agents/SKILL.md:2:name: dispatching-parallel-agents
+skills/requesting-code-review/SKILL.md:2:name: requesting-code-review
+tests/opencode/test-plugin-loading.sh:45:# Test 3: Check using-jstack skill exists (critical for bootstrap)
+tests/opencode/test-plugin-loading.sh:46:echo "Test 3: Checking using-jstack skill (required for bootstrap)..."
+tests/opencode/test-plugin-loading.sh:47:if [ -f "$SUPERPOWERS_SKILLS_DIR/using-jstack/SKILL.md" ]; then
+tests/opencode/test-plugin-loading.sh:48:    echo "  [PASS] using-jstack skill exists"
+tests/opencode/test-plugin-loading.sh:50:    echo "  [FAIL] using-jstack skill not found (required for bootstrap)"
+skills/writing-plans/SKILL.md:22:[Omitted long matching line]
+skills/receiving-code-review/SKILL.md:2:name: receiving-code-review
+skills/using-git-worktrees/SKILL.md:251:- **jstack:brainstorming** (Phase 4) - When design is approved and implementation follows
+tests/skill-triggering/run-all.sh:14:    "dispatching-parallel-agents"
+tests/skill-triggering/run-all.sh:16:    "requesting-code-review"
+skills/brainstorming/SKILL.md:2:name: brainstorming
+skills/brainstorming/SKILL.md:6:# Brainstorming Ideas Into Designs
+skills/brainstorming/SKILL.md:55:digraph brainstorming {
+skills/brainstorming/SKILL.md:93:[Omitted long matching line]
+skills/brainstorming/SKILL.md:111:[Omitted long matching line]
+skills/brainstorming/SKILL.md:216:[Omitted long matching line]
+skills/brainstorming/SKILL.md:221:[Omitted long matching line]
+skills/brainstorming/SKILL.md:231:`skills/brainstorming/visual-companion.md`
+skills/brainstorming/visual-companion.md:3:Browser-based visual brainstorming companion for showing mockups, diagrams, and options.
+skills/brainstorming/visual-companion.md:40:#           "screen_dir":"/path/to/project/.jstack/brainstorm/12345-1706000000/content",
+skills/brainstorming/visual-companion.md:41:#           "state_dir":"/path/to/project/.jstack/brainstorm/12345-1706000000/state"}
+skills/brainstorming/visual-companion.md:46:[Omitted long matching line]
+skills/brainstorming/visual-companion.md:48:[Omitted long matching line]
+skills/brainstorming/visual-companion.md:282:If the session used `--project-dir`, mockup files persist in `.jstack/brainstorm/` for later reference. Only `/tmp` sessions get deleted on stop.
+skills/brainstorming/scripts/helper.js:82:  window.brainstorm = {
+skills/brainstorming/scripts/server.cjs:76:const PORT = process.env.BRAINSTORM_PORT || (49152 + Math.floor(Math.random() * 16383));
+skills/brainstorming/scripts/server.cjs:77:const HOST = process.env.BRAINSTORM_HOST || '127.0.0.1';
+skills/brainstorming/scripts/server.cjs:78:const URL_HOST = process.env.BRAINSTORM_URL_HOST || (HOST === '127.0.0.1' ? 'localhost' : HOST);
+skills/brainstorming/scripts/server.cjs:79:const SESSION_DIR = process.env.BRAINSTORM_DIR || '/tmp/brainstorm';
+skills/brainstorming/scripts/server.cjs:82:let ownerPid = process.env.BRAINSTORM_OWNER_PID ? Number(process.env.BRAINSTORM_OWNER_PID) : null;
+skills/brainstorming/scripts/server.cjs:94:<head><meta charset="utf-8"><title>Brainstorm Companion</title>
+skills/brainstorming/scripts/server.cjs:98:<body><h1>Brainstorm Companion</h1>
+skills/brainstorming/scripts/start-server.sh:2:# Start the brainstorm server and output connection info
+skills/brainstorming/scripts/start-server.sh:9:#   --project-dir <path>  Store session files under <path>/.jstack/brainstorm/
+skills/brainstorming/scripts/start-server.sh:81:  SESSION_DIR="${PROJECT_DIR}/.jstack/brainstorm/${SESSION_ID}"
+skills/brainstorming/scripts/start-server.sh:83:  SESSION_DIR="/tmp/brainstorm-${SESSION_ID}"
+skills/brainstorming/scripts/start-server.sh:113:  env BRAINSTORM_DIR="$SESSION_DIR" BRAINSTORM_HOST="$BIND_HOST" BRAINSTORM_URL_HOST="$URL_HOST" BRAINSTORM_OWNER_PID="$OWNER_PID" node server.cjs
+skills/brainstorming/scripts/start-server.sh:119:nohup env BRAINSTORM_DIR="$SESSION_DIR" BRAINSTORM_HOST="$BIND_HOST" BRAINSTORM_URL_HOST="$URL_HOST" BRAINSTORM_OWNER_PID="$OWNER_PID" node server.cjs > "$LOG_FILE" 2>&1 &
+skills/brainstorming/scripts/frame-template.html:5:  <title>JStack Brainstorming</title>
+skills/brainstorming/scripts/frame-template.html:8:     * BRAINSTORM COMPANION FRAME TEMPLATE
+skills/brainstorming/scripts/frame-template.html:199:    <h1><a href="https://github.com/jungsooyun/jstack" style="color: inherit; text-decoration: none;">JStack Brainstorming</a></h1>
+skills/brainstorming/scripts/stop-server.sh:2:# Stop the brainstorm server and clean up
+tests/claude-code/test-document-review-system.sh:81:Read the spec-document-reviewer-prompt.md template in skills/brainstorming/ to understand the review format.
+tests/explicit-skill-requests/prompts/claude-suggested-it.txt:6:2. Parallel Session (separate) - Open a new Claude Code session with the execute-plan skill, batch execution with review checkpoints
+tests/brainstorm-server/windows-lifecycle.test.sh:2:# Windows lifecycle tests for the brainstorm server.
+tests/brainstorm-server/windows-lifecycle.test.sh:4:# Verifies that the brainstorm server survives the 60-second lifecycle
+tests/brainstorm-server/windows-lifecycle.test.sh:14:#   bash tests/brainstorm-server/windows-lifecycle.test.sh
+tests/brainstorm-server/windows-lifecycle.test.sh:21:START_SCRIPT="$REPO_ROOT/skills/brainstorming/scripts/start-server.sh"
+tests/brainstorm-server/windows-lifecycle.test.sh:22:STOP_SCRIPT="$REPO_ROOT/skills/brainstorming/scripts/stop-server.sh"
+tests/brainstorm-server/windows-lifecycle.test.sh:23:SERVER_JS="$REPO_ROOT/skills/brainstorming/scripts/server.js"
+tests/brainstorm-server/windows-lifecycle.test.sh:25:TEST_DIR="${TMPDIR:-/tmp}/brainstorm-win-test-$$"
+tests/brainstorm-server/windows-lifecycle.test.sh:94:echo "=== Brainstorm Server Windows Lifecycle Tests ==="
+tests/brainstorm-server/windows-lifecycle.test.sh:145:# ========== Test 2: start-server.sh passes empty BRAINSTORM_OWNER_PID ==========
+tests/brainstorm-server/windows-lifecycle.test.sh:153:echo "CAPTURED_OWNER_PID=${BRAINSTORM_OWNER_PID:-__UNSET__}"
+tests/brainstorm-server/windows-lifecycle.test.sh:162:    pass "start-server.sh passes empty BRAINSTORM_OWNER_PID on Windows"
+tests/brainstorm-server/windows-lifecycle.test.sh:164:    fail "start-server.sh passes empty BRAINSTORM_OWNER_PID on Windows" \
+tests/brainstorm-server/windows-lifecycle.test.sh:170:  skip "start-server.sh passes empty BRAINSTORM_OWNER_PID" "not on Windows"
+tests/brainstorm-server/windows-lifecycle.test.sh:212:BRAINSTORM_DIR="$TEST_DIR/survival" \
+tests/brainstorm-server/windows-lifecycle.test.sh:213:BRAINSTORM_HOST="127.0.0.1" \
+tests/brainstorm-server/windows-lifecycle.test.sh:214:BRAINSTORM_URL_HOST="localhost" \
+tests/brainstorm-server/windows-lifecycle.test.sh:215:BRAINSTORM_OWNER_PID="" \
+tests/brainstorm-server/windows-lifecycle.test.sh:216:BRAINSTORM_PORT=$((49152 + RANDOM % 16383)) \
+tests/brainstorm-server/windows-lifecycle.test.sh:270:BRAINSTORM_DIR="$TEST_DIR/control" \
+tests/brainstorm-server/windows-lifecycle.test.sh:271:BRAINSTORM_HOST="127.0.0.1" \
+tests/brainstorm-server/windows-lifecycle.test.sh:272:BRAINSTORM_URL_HOST="localhost" \
+tests/brainstorm-server/windows-lifecycle.test.sh:273:BRAINSTORM_OWNER_PID="$BAD_PID" \
+tests/brainstorm-server/windows-lifecycle.test.sh:274:BRAINSTORM_PORT=$((49152 + RANDOM % 16383)) \
+tests/brainstorm-server/windows-lifecycle.test.sh:314:BRAINSTORM_DIR="$TEST_DIR/stop-test" \
+tests/brainstorm-server/windows-lifecycle.test.sh:315:BRAINSTORM_HOST="127.0.0.1" \
+tests/brainstorm-server/windows-lifecycle.test.sh:316:BRAINSTORM_URL_HOST="localhost" \
+tests/brainstorm-server/windows-lifecycle.test.sh:317:BRAINSTORM_OWNER_PID="" \
+tests/brainstorm-server/windows-lifecycle.test.sh:318:BRAINSTORM_PORT=$((49152 + RANDOM % 16383)) \
+tests/explicit-skill-requests/run-extended-multiturn-test.sh:24:# Turn 1: Start brainstorming
+tests/explicit-skill-requests/run-extended-multiturn-test.sh:25:echo ">>> Turn 1: Brainstorming request..."
+tests/explicit-skill-requests/run-extended-multiturn-test.sh:34:# Turn 2: Answer a brainstorming question
+tests/explicit-skill-requests/run-haiku-test.sh:52:# Turn 1: Start brainstorming
+tests/explicit-skill-requests/run-haiku-test.sh:53:echo ">>> Turn 1: Brainstorming request..."
+tests/brainstorm-server/package.json:2:  "name": "brainstorm-server-tests",
+tests/explicit-skill-requests/prompts/please-use-brainstorming.txt:1:please use the brainstorming skill to help me think through this feature
+tests/explicit-skill-requests/run-all.sh:39:# Test: please use brainstorming
+tests/explicit-skill-requests/run-all.sh:40:echo ">>> Test 3: please-use-brainstorming"
+tests/explicit-skill-requests/run-all.sh:41:if "$SCRIPT_DIR/run-test.sh" "brainstorming" "$PROMPTS_DIR/please-use-brainstorming.txt"; then
+tests/explicit-skill-requests/run-all.sh:43:    RESULTS="$RESULTS\nPASS: please-use-brainstorming"
+tests/explicit-skill-requests/run-all.sh:46:    RESULTS="$RESULTS\nFAIL: please-use-brainstorming"
+tests/explicit-skill-requests/run-all.sh:51:echo ">>> Test 4: mid-conversation-execute-plan"
+tests/explicit-skill-requests/run-all.sh:52:if "$SCRIPT_DIR/run-test.sh" "subagent-driven-development" "$PROMPTS_DIR/mid-conversation-execute-plan.txt"; then
+tests/explicit-skill-requests/run-all.sh:54:    RESULTS="$RESULTS\nPASS: mid-conversation-execute-plan"
+tests/explicit-skill-requests/run-all.sh:57:    RESULTS="$RESULTS\nFAIL: mid-conversation-execute-plan"
+tests/brainstorm-server/package-lock.json:2:  "name": "brainstorm-server-tests",
+tests/brainstorm-server/package-lock.json:8:      "name": "brainstorm-server-tests",
+tests/brainstorm-server/ws-protocol.test.js:19:const SERVER_PATH = path.join(__dirname, '../../skills/brainstorming/scripts/server.cjs');
+tests/brainstorm-server/server.test.js:2: * Integration tests for the brainstorm server.
+tests/brainstorm-server/server.test.js:5: * file watching, and the brainstorming workflow.
+tests/brainstorm-server/server.test.js:18:const SERVER_PATH = path.join(__dirname, '../../skills/brainstorming/scripts/server.cjs');
+tests/brainstorm-server/server.test.js:20:const TEST_DIR = '/tmp/brainstorm-test';
+tests/brainstorm-server/server.test.js:50:    env: { ...process.env, BRAINSTORM_PORT: TEST_PORT, BRAINSTORM_DIR: TEST_DIR }
+tests/brainstorm-server/server.test.js:131:      assert(res.body.includes('brainstorm'), 'Should have brainstorm API from helper');
+tests/brainstorm-server/server.test.js:390:        path.join(__dirname, '../../skills/brainstorming/scripts/helper.js'), 'utf-8'
+tests/brainstorm-server/server.test.js:395:      assert(helperContent.includes('brainstorm'), 'Should expose brainstorm API');
+tests/brainstorm-server/server.test.js:404:        path.join(__dirname, '../../skills/brainstorming/scripts/frame-template.html'), 'utf-8'
+
+hook: PostToolUse
+hook: PostToolUse Completed
+codex
+Because the plan modifies behavior-shaping skill content, the repository’s `writing-skills` rules directly govern its required evaluation evidence. I’m checking that guidance now; this is read-only and within the explicitly allowed repository skills scope.
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc 'nl -ba skills/writing-skills/SKILL.md' in /Users/kakao1/.codex/jstack
+ succeeded in 0ms:
+     1	---
+     2	name: writing-skills
+     3	description: Use when creating new skills, editing existing skills, or verifying skills work before deployment
+     4	---
+     5	
+     6	# Writing Skills
+     7	
+     8	## Overview
+     9	
+    10	**Writing skills IS Test-Driven Development applied to process documentation.**
+    11	
+    12	**Personal skills live in agent-specific directories (`~/.claude/skills` for Claude Code, `~/.agents/skills/` for Codex)** 
+    13	
+    14	You write test cases (pressure scenarios with subagents), watch them fail (baseline behavior), write the skill (documentation), watch tests pass (agents comply), and refactor (close loopholes).
+    15	
+    16	**Core principle:** If you didn't watch an agent fail without the skill, you don't know if the skill teaches the right thing.
+    17	
+    18	**REQUIRED BACKGROUND:** You MUST understand jstack:test-driven-development before using this skill. That skill defines the fundamental RED-GREEN-REFACTOR cycle. This skill adapts TDD to documentation.
+    19	
+    20	**Official guidance:** For Anthropic's official skill authoring best practices, see anthropic-best-practices.md. This document provides additional patterns and guidelines that complement the TDD-focused approach in this skill.
+    21	
+    22	## What is a Skill?
+    23	
+    24	A **skill** is a reference guide for proven techniques, patterns, or tools. Skills help future Claude instances find and apply effective approaches.
+    25	
+    26	**Skills are:** Reusable techniques, patterns, tools, reference guides
+    27	
+    28	**Skills are NOT:** Narratives about how you solved a problem once
+    29	
+    30	## TDD Mapping for Skills
+    31	
+    32	| TDD Concept | Skill Creation |
+    33	|-------------|----------------|
+    34	| **Test case** | Pressure scenario with subagent |
+    35	| **Production code** | Skill document (SKILL.md) |
+    36	| **Test fails (RED)** | Agent violates rule without skill (baseline) |
+    37	| **Test passes (GREEN)** | Agent complies with skill present |
+    38	| **Refactor** | Close loopholes while maintaining compliance |
+    39	| **Write test first** | Run baseline scenario BEFORE writing skill |
+    40	| **Watch it fail** | Document exact rationalizations agent uses |
+    41	| **Minimal code** | Write skill addressing those specific violations |
+    42	| **Watch it pass** | Verify agent now complies |
+    43	| **Refactor cycle** | Find new rationalizations → plug → re-verify |
+    44	
+    45	The entire skill creation process follows RED-GREEN-REFACTOR.
+    46	
+    47	## When to Create a Skill
+    48	
+    49	**Create when:**
+    50	- Technique wasn't intuitively obvious to you
+    51	- You'd reference this again across projects
+    52	- Pattern applies broadly (not project-specific)
+    53	- Others would benefit
+    54	
+    55	**Don't create for:**
+    56	- One-off solutions
+    57	- Standard practices well-documented elsewhere
+    58	- Project-specific conventions (put in CLAUDE.md)
+    59	- Mechanical constraints (if it's enforceable with regex/validation, automate it—save documentation for judgment calls)
+    60	
+    61	## Skill Types
+    62	
+    63	### Technique
+    64	Concrete method with steps to follow (condition-based-waiting, root-cause-tracing)
+    65	
+    66	### Pattern
+    67	Way of thinking about problems (flatten-with-flags, test-invariants)
+    68	
+    69	### Reference
+    70	API docs, syntax guides, tool documentation (office docs)
+    71	
+    72	## Directory Structure
+    73	
+    74	
+    75	```
+    76	skills/
+    77	  skill-name/
+    78	    SKILL.md              # Main reference (required)
+    79	    supporting-file.*     # Only if needed
+    80	```
+    81	
+    82	**Flat namespace** - all skills in one searchable namespace
+    83	
+    84	**Separate files for:**
+    85	1. **Heavy reference** (100+ lines) - API docs, comprehensive syntax
+    86	2. **Reusable tools** - Scripts, utilities, templates
+    87	
+    88	**Keep inline:**
+    89	- Principles and concepts
+    90	- Code patterns (< 50 lines)
+    91	- Everything else
+    92	
+    93	## SKILL.md Structure
+    94	
+    95	**Frontmatter (YAML):**
+    96	- Two required fields: `name` and `description` (see [agentskills.io/specification](https://agentskills.io/specification) for all supported fields)
+    97	- Max 1024 characters total
+    98	- `name`: Use letters, numbers, and hyphens only (no parentheses, special chars)
+    99	- `description`: Third-person, describes ONLY when to use (NOT what it does)
+   100	  - Start with "Use when..." to focus on triggering conditions
+   101	  - Include specific symptoms, situations, and contexts
+   102	  - **NEVER summarize the skill's process or workflow** (see CSO section for why)
+   103	  - Keep under 500 characters if possible
+   104	
+   105	```markdown
+   106	---
+   107	name: Skill-Name-With-Hyphens
+   108	description: Use when [specific triggering conditions and symptoms]
+   109	---
+   110	
+   111	# Skill Name
+   112	
+   113	## Overview
+   114	What is this? Core principle in 1-2 sentences.
+   115	
+   116	## When to Use
+   117	[Small inline flowchart IF decision non-obvious]
+   118	
+   119	Bullet list with SYMPTOMS and use cases
+   120	When NOT to use
+   121	
+   122	## Core Pattern (for techniques/patterns)
+   123	Before/after code comparison
+   124	
+   125	## Quick Reference
+   126	Table or bullets for scanning common operations
+   127	
+   128	## Implementation
+   129	Inline code for simple patterns
+   130	Link to file for heavy reference or reusable tools
+   131	
+   132	## Common Mistakes
+   133	What goes wrong + fixes
+   134	
+   135	## Real-World Impact (optional)
+   136	Concrete results
+   137	```
+   138	
+   139	
+   140	## Claude Search Optimization (CSO)
+   141	
+   142	**Critical for discovery:** Future Claude needs to FIND your skill
+   143	
+   144	### 1. Rich Description Field
+   145	
+   146	**Purpose:** Claude reads description to decide which skills to load for a given task. Make it answer: "Should I read this skill right now?"
+   147	
+   148	**Format:** Start with "Use when..." to focus on triggering conditions
+   149	
+   150	**CRITICAL: Description = When to Use, NOT What the Skill Does**
+   151	
+   152	The description should ONLY describe triggering conditions. Do NOT summarize the skill's process or workflow in the description.
+   153	
+   154	**Why this matters:** Testing revealed that when a description summarizes the skill's workflow, Claude may follow the description instead of reading the full skill content. A description saying "code review between tasks" caused Claude to do ONE review, even though the skill's flowchart clearly showed TWO reviews (spec compliance then code quality).
+   155	
+   156	When the description was changed to just "Use when executing implementation plans with independent tasks" (no workflow summary), Claude correctly read the flowchart and followed the two-stage review process.
+   157	
+   158	**The trap:** Descriptions that summarize workflow create a shortcut Claude will take. The skill body becomes documentation Claude skips.
+   159	
+   160	```yaml
+   161	# ❌ BAD: Summarizes workflow - Claude may follow this instead of reading skill
+   162	description: Use when executing plans - dispatches subagent per task with code review between tasks
+   163	
+   164	# ❌ BAD: Too much process detail
+   165	description: Use for TDD - write test first, watch it fail, write minimal code, refactor
+   166	
+   167	# ✅ GOOD: Just triggering conditions, no workflow summary
+   168	description: Use when executing implementation plans with independent tasks in the current session
+   169	
+   170	# ✅ GOOD: Triggering conditions only
+   171	description: Use when implementing any feature or bugfix, before writing implementation code
+   172	```
+   173	
+   174	**Content:**
+   175	- Use concrete triggers, symptoms, and situations that signal this skill applies
+   176	- Describe the *problem* (race conditions, inconsistent behavior) not *language-specific symptoms* (setTimeout, sleep)
+   177	- Keep triggers technology-agnostic unless the skill itself is technology-specific
+   178	- If skill is technology-specific, make that explicit in the trigger
+   179	- Write in third person (injected into system prompt)
+   180	- **NEVER summarize the skill's process or workflow**
+   181	
+   182	```yaml
+   183	# ❌ BAD: Too abstract, vague, doesn't include when to use
+   184	description: For async testing
+   185	
+   186	# ❌ BAD: First person
+   187	description: I can help you with async tests when they're flaky
+   188	
+   189	# ❌ BAD: Mentions technology but skill isn't specific to it
+   190	description: Use when tests use setTimeout/sleep and are flaky
+   191	
+   192	# ✅ GOOD: Starts with "Use when", describes problem, no workflow
+   193	description: Use when tests have race conditions, timing dependencies, or pass/fail inconsistently
+   194	
+   195	# ✅ GOOD: Technology-specific skill with explicit trigger
+   196	description: Use when using React Router and handling authentication redirects
+   197	```
+   198	
+   199	### 2. Keyword Coverage
+   200	
+   201	Use words Claude would search for:
+   202	- Error messages: "Hook timed out", "ENOTEMPTY", "race condition"
+   203	- Symptoms: "flaky", "hanging", "zombie", "pollution"
+   204	- Synonyms: "timeout/hang/freeze", "cleanup/teardown/afterEach"
+   205	- Tools: Actual commands, library names, file types
+   206	
+   207	### 3. Descriptive Naming
+   208	
+   209	**Use active voice, verb-first:**
+   210	- ✅ `creating-skills` not `skill-creation`
+   211	- ✅ `condition-based-waiting` not `async-test-helpers`
+   212	
+   213	### 4. Token Efficiency (Critical)
+   214	
+   215	**Problem:** getting-started and frequently-referenced skills load into EVERY conversation. Every token counts.
+   216	
+   217	**Target word counts:**
+   218	- getting-started workflows: <150 words each
+   219	- Frequently-loaded skills: <200 words total
+   220	- Other skills: <500 words (still be concise)
+   221	
+   222	**Techniques:**
+   223	
+   224	**Move details to tool help:**
+   225	```bash
+   226	# ❌ BAD: Document all flags in SKILL.md
+   227	search-conversations supports --text, --both, --after DATE, --before DATE, --limit N
+   228	
+   229	# ✅ GOOD: Reference --help
+   230	search-conversations supports multiple modes and filters. Run --help for details.
+   231	```
+   232	
+   233	**Use cross-references:**
+   234	```markdown
+   235	# ❌ BAD: Repeat workflow details
+   236	When searching, dispatch subagent with template...
+   237	[20 lines of repeated instructions]
+   238	
+   239	# ✅ GOOD: Reference other skill
+   240	Always use subagents (50-100x context savings). REQUIRED: Use [other-skill-name] for workflow.
+   241	```
+   242	
+   243	**Compress examples:**
+   244	```markdown
+   245	# ❌ BAD: Verbose example (42 words)
+   246	your human partner: "How did we handle authentication errors in React Router before?"
+   247	You: I'll search past conversations for React Router authentication patterns.
+   248	[Dispatch subagent with search query: "React Router authentication error handling 401"]
+   249	
+   250	# ✅ GOOD: Minimal example (20 words)
+   251	Partner: "How did we handle auth errors in React Router?"
+   252	You: Searching...
+   253	[Dispatch subagent → synthesis]
+   254	```
+   255	
+   256	**Eliminate redundancy:**
+   257	- Don't repeat what's in cross-referenced skills
+   258	- Don't explain what's obvious from command
+   259	- Don't include multiple examples of same pattern
+   260	
+   261	**Verification:**
+   262	```bash
+   263	wc -w skills/path/SKILL.md
+   264	# getting-started workflows: aim for <150 each
+   265	# Other frequently-loaded: aim for <200 total
+   266	```
+   267	
+   268	**Name by what you DO or core insight:**
+   269	- ✅ `condition-based-waiting` > `async-test-helpers`
+   270	- ✅ `using-skills` not `skill-usage`
+   271	- ✅ `flatten-with-flags` > `data-structure-refactoring`
+   272	- ✅ `root-cause-tracing` > `debugging-techniques`
+   273	
+   274	**Gerunds (-ing) work well for processes:**
+   275	- `creating-skills`, `testing-skills`, `debugging-with-logs`
+   276	- Active, describes the action you're taking
+   277	
+   278	### 4. Cross-Referencing Other Skills
+   279	
+   280	**When writing documentation that references other skills:**
+   281	
+   282	Use skill name only, with explicit requirement markers:
+   283	- ✅ Good: `**REQUIRED SUB-SKILL:** Use jstack:test-driven-development`
+   284	- ✅ Good: `**REQUIRED BACKGROUND:** You MUST understand jstack:systematic-debugging`
+   285	- ❌ Bad: `See skills/testing/test-driven-development` (unclear if required)
+   286	- ❌ Bad: `@skills/testing/test-driven-development/SKILL.md` (force-loads, burns context)
+   287	
+   288	**Why no @ links:** `@` syntax force-loads files immediately, consuming 200k+ context before you need them.
+   289	
+   290	## Flowchart Usage
+   291	
+   292	```dot
+   293	digraph when_flowchart {
+   294	    "Need to show information?" [shape=diamond];
+   295	    "Decision where I might go wrong?" [shape=diamond];
+   296	    "Use markdown" [shape=box];
+   297	    "Small inline flowchart" [shape=box];
+   298	
+   299	    "Need to show information?" -> "Decision where I might go wrong?" [label="yes"];
+   300	    "Decision where I might go wrong?" -> "Small inline flowchart" [label="yes"];
+   301	    "Decision where I might go wrong?" -> "Use markdown" [label="no"];
+   302	}
+   303	```
+   304	
+   305	**Use flowcharts ONLY for:**
+   306	- Non-obvious decision points
+   307	- Process loops where you might stop too early
+   308	- "When to use A vs B" decisions
+   309	
+   310	**Never use flowcharts for:**
+   311	- Reference material → Tables, lists
+   312	- Code examples → Markdown blocks
+   313	- Linear instructions → Numbered lists
+   314	- Labels without semantic meaning (step1, helper2)
+   315	
+   316	See @graphviz-conventions.dot for graphviz style rules.
+   317	
+   318	**Visualizing for your human partner:** Use `render-graphs.js` in this directory to render a skill's flowcharts to SVG:
+   319	```bash
+   320	./render-graphs.js ../some-skill           # Each diagram separately
+   321	./render-graphs.js ../some-skill --combine # All diagrams in one SVG
+   322	```
+   323	
+   324	## Code Examples
+   325	
+   326	**One excellent example beats many mediocre ones**
+   327	
+   328	Choose most relevant language:
+   329	- Testing techniques → TypeScript/JavaScript
+   330	- System debugging → Shell/Python
+   331	- Data processing → Python
+   332	
+   333	**Good example:**
+   334	- Complete and runnable
+   335	- Well-commented explaining WHY
+   336	- From real scenario
+   337	- Shows pattern clearly
+   338	- Ready to adapt (not generic template)
+   339	
+   340	**Don't:**
+   341	- Implement in 5+ languages
+   342	- Create fill-in-the-blank templates
+   343	- Write contrived examples
+   344	
+   345	You're good at porting - one great example is enough.
+   346	
+   347	## File Organization
+   348	
+   349	### Self-Contained Skill
+   350	```
+   351	defense-in-depth/
+   352	  SKILL.md    # Everything inline
+   353	```
+   354	When: All content fits, no heavy reference needed
+   355	
+   356	### Skill with Reusable Tool
+   357	```
+   358	condition-based-waiting/
+   359	  SKILL.md    # Overview + patterns
+   360	  example.ts  # Working helpers to adapt
+   361	```
+   362	When: Tool is reusable code, not just narrative
+   363	
+   364	### Skill with Heavy Reference
+   365	```
+   366	pptx/
+   367	  SKILL.md       # Overview + workflows
+   368	  pptxgenjs.md   # 600 lines API reference
+   369	  ooxml.md       # 500 lines XML structure
+   370	  scripts/       # Executable tools
+   371	```
+   372	When: Reference material too large for inline
+   373	
+   374	## The Iron Law (Same as TDD)
+   375	
+   376	```
+   377	NO SKILL WITHOUT A FAILING TEST FIRST
+   378	```
+   379	
+   380	This applies to NEW skills AND EDITS to existing skills.
+   381	
+   382	Write skill before testing? Delete it. Start over.
+   383	Edit skill without testing? Same violation.
+   384	
+   385	**No exceptions:**
+   386	- Not for "simple additions"
+   387	- Not for "just adding a section"
+   388	- Not for "documentation updates"
+   389	- Don't keep untested changes as "reference"
+   390	- Don't "adapt" while running tests
+   391	- Delete means delete
+   392	
+   393	**REQUIRED BACKGROUND:** The jstack:test-driven-development skill explains why this matters. Same principles apply to documentation.
+   394	
+   395	## Testing All Skill Types
+   396	
+   397	Different skill types need different test approaches:
+   398	
+   399	### Discipline-Enforcing Skills (rules/requirements)
+   400	
+   401	**Examples:** TDD, verification-before-completion, designing-before-coding
+   402	
+   403	**Test with:**
+   404	- Academic questions: Do they understand the rules?
+   405	- Pressure scenarios: Do they comply under stress?
+   406	- Multiple pressures combined: time + sunk cost + exhaustion
+   407	- Identify rationalizations and add explicit counters
+   408	
+   409	**Success criteria:** Agent follows rule under maximum pressure
+   410	
+   411	### Technique Skills (how-to guides)
+   412	
+   413	**Examples:** condition-based-waiting, root-cause-tracing, defensive-programming
+   414	
+   415	**Test with:**
+   416	- Application scenarios: Can they apply the technique correctly?
+   417	- Variation scenarios: Do they handle edge cases?
+   418	- Missing information tests: Do instructions have gaps?
+   419	
+   420	**Success criteria:** Agent successfully applies technique to new scenario
+   421	
+   422	### Pattern Skills (mental models)
+   423	
+   424	**Examples:** reducing-complexity, information-hiding concepts
+   425	
+   426	**Test with:**
+   427	- Recognition scenarios: Do they recognize when pattern applies?
+   428	- Application scenarios: Can they use the mental model?
+   429	- Counter-examples: Do they know when NOT to apply?
+   430	
+   431	**Success criteria:** Agent correctly identifies when/how to apply pattern
+   432	
+   433	### Reference Skills (documentation/APIs)
+   434	
+   435	**Examples:** API documentation, command references, library guides
+   436	
+   437	**Test with:**
+   438	- Retrieval scenarios: Can they find the right information?
+   439	- Application scenarios: Can they use what they found correctly?
+   440	- Gap testing: Are common use cases covered?
+   441	
+   442	**Success criteria:** Agent finds and correctly applies reference information
+   443	
+   444	## Common Rationalizations for Skipping Testing
+   445	
+   446	| Excuse | Reality |
+   447	|--------|---------|
+   448	| "Skill is obviously clear" | Clear to you ≠ clear to other agents. Test it. |
+   449	| "It's just a reference" | References can have gaps, unclear sections. Test retrieval. |
+   450	| "Testing is overkill" | Untested skills have issues. Always. 15 min testing saves hours. |
+   451	| "I'll test if problems emerge" | Problems = agents can't use skill. Test BEFORE deploying. |
+   452	| "Too tedious to test" | Testing is less tedious than debugging bad skill in production. |
+   453	| "I'm confident it's good" | Overconfidence guarantees issues. Test anyway. |
+   454	| "Academic review is enough" | Reading ≠ using. Test application scenarios. |
+   455	| "No time to test" | Deploying untested skill wastes more time fixing it later. |
+   456	
+   457	**All of these mean: Test before deploying. No exceptions.**
+   458	
+   459	## Bulletproofing Skills Against Rationalization
+   460	
+   461	Skills that enforce discipline (like TDD) need to resist rationalization. Agents are smart and will find loopholes when under pressure.
+   462	
+   463	**Psychology note:** Understanding WHY persuasion techniques work helps you apply them systematically. See persuasion-principles.md for research foundation (Cialdini, 2021; Meincke et al., 2025) on authority, commitment, scarcity, social proof, and unity principles.
+   464	
+   465	### Close Every Loophole Explicitly
+   466	
+   467	Don't just state the rule - forbid specific workarounds:
+   468	
+   469	<Bad>
+   470	```markdown
+   471	Write code before test? Delete it.
+   472	```
+   473	</Bad>
+   474	
+   475	<Good>
+   476	```markdown
+   477	Write code before test? Delete it. Start over.
+   478	
+   479	**No exceptions:**
+   480	- Don't keep it as "reference"
+   481	- Don't "adapt" it while writing tests
+   482	- Don't look at it
+   483	- Delete means delete
+   484	```
+   485	</Good>
+   486	
+   487	### Address "Spirit vs Letter" Arguments
+   488	
+   489	Add foundational principle early:
+   490	
+   491	```markdown
+   492	**Violating the letter of the rules is violating the spirit of the rules.**
+   493	```
+   494	
+   495	This cuts off entire class of "I'm following the spirit" rationalizations.
+   496	
+   497	### Build Rationalization Table
+   498	
+   499	Capture rationalizations from baseline testing (see Testing section below). Every excuse agents make goes in the table:
+   500	
+   501	```markdown
+   502	| Excuse | Reality |
+   503	|--------|---------|
+   504	| "Too simple to test" | Simple code breaks. Test takes 30 seconds. |
+   505	| "I'll test after" | Tests passing immediately prove nothing. |
+   506	| "Tests after achieve same goals" | Tests-after = "what does this do?" Tests-first = "what should this do?" |
+   507	```
+   508	
+   509	### Create Red Flags List
+   510	
+   511	Make it easy for agents to self-check when rationalizing:
+   512	
+   513	```markdown
+   514	## Red Flags - STOP and Start Over
+   515	
+   516	- Code before test
+   517	- "I already manually tested it"
+   518	- "Tests after achieve the same purpose"
+   519	- "It's about spirit not ritual"
+   520	- "This is different because..."
+   521	
+   522	**All of these mean: Delete code. Start over with TDD.**
+   523	```
+   524	
+   525	### Update CSO for Violation Symptoms
+   526	
+   527	Add to description: symptoms of when you're ABOUT to violate the rule:
+   528	
+   529	```yaml
+   530	description: use when implementing any feature or bugfix, before writing implementation code
+   531	```
+   532	
+   533	## RED-GREEN-REFACTOR for Skills
+   534	
+   535	Follow the TDD cycle:
+   536	
+   537	### RED: Write Failing Test (Baseline)
+   538	
+   539	Run pressure scenario with subagent WITHOUT the skill. Document exact behavior:
+   540	- What choices did they make?
+   541	- What rationalizations did they use (verbatim)?
+   542	- Which pressures triggered violations?
+   543	
+   544	This is "watch the test fail" - you must see what agents naturally do before writing the skill.
+   545	
+   546	### GREEN: Write Minimal Skill
+   547	
+   548	Write skill that addresses those specific rationalizations. Don't add extra content for hypothetical cases.
+   549	
+   550	Run same scenarios WITH skill. Agent should now comply.
+   551	
+   552	### REFACTOR: Close Loopholes
+   553	
+   554	Agent found new rationalization? Add explicit counter. Re-test until bulletproof.
+   555	
+   556	**Testing methodology:** See @testing-skills-with-subagents.md for the complete testing methodology:
+   557	- How to write pressure scenarios
+   558	- Pressure types (time, sunk cost, authority, exhaustion)
+   559	- Plugging holes systematically
+   560	- Meta-testing techniques
+   561	
+   562	## Anti-Patterns
+   563	
+   564	### ❌ Narrative Example
+   565	"In session 2025-10-03, we found empty projectDir caused..."
+   566	**Why bad:** Too specific, not reusable
+   567	
+   568	### ❌ Multi-Language Dilution
+   569	example-js.js, example-py.py, example-go.go
+   570	**Why bad:** Mediocre quality, maintenance burden
+   571	
+   572	### ❌ Code in Flowcharts
+   573	```dot
+   574	step1 [label="import fs"];
+   575	step2 [label="read file"];
+   576	```
+   577	**Why bad:** Can't copy-paste, hard to read
+   578	
+   579	### ❌ Generic Labels
+   580	helper1, helper2, step3, pattern4
+   581	**Why bad:** Labels should have semantic meaning
+   582	
+   583	## STOP: Before Moving to Next Skill
+   584	
+   585	**After writing ANY skill, you MUST STOP and complete the deployment process.**
+   586	
+   587	**Do NOT:**
+   588	- Create multiple skills in batch without testing each
+   589	- Move to next skill before current one is verified
+   590	- Skip testing because "batching is more efficient"
+   591	
+   592	**The deployment checklist below is MANDATORY for EACH skill.**
+   593	
+   594	Deploying untested skills = deploying untested code. It's a violation of quality standards.
+   595	
+   596	## Skill Creation Checklist (TDD Adapted)
+   597	
+   598	**IMPORTANT: Use TodoWrite to create todos for EACH checklist item below.**
+   599	
+   600	**RED Phase - Write Failing Test:**
+   601	- [ ] Create pressure scenarios (3+ combined pressures for discipline skills)
+   602	- [ ] Run scenarios WITHOUT skill - document baseline behavior verbatim
+   603	- [ ] Identify patterns in rationalizations/failures
+   604	
+   605	**GREEN Phase - Write Minimal Skill:**
+   606	- [ ] Name uses only letters, numbers, hyphens (no parentheses/special chars)
+   607	- [ ] YAML frontmatter with required `name` and `description` fields (max 1024 chars; see [spec](https://agentskills.io/specification))
+   608	- [ ] Description starts with "Use when..." and includes specific triggers/symptoms
+   609	- [ ] Description written in third person
+   610	- [ ] Keywords throughout for search (errors, symptoms, tools)
+   611	- [ ] Clear overview with core principle
+   612	- [ ] Address specific baseline failures identified in RED
+   613	- [ ] Code inline OR link to separate file
+   614	- [ ] One excellent example (not multi-language)
+   615	- [ ] Run scenarios WITH skill - verify agents now comply
+   616	
+   617	**REFACTOR Phase - Close Loopholes:**
+   618	- [ ] Identify NEW rationalizations from testing
+   619	- [ ] Add explicit counters (if discipline skill)
+   620	- [ ] Build rationalization table from all test iterations
+   621	- [ ] Create red flags list
+   622	- [ ] Re-test until bulletproof
+   623	
+   624	**Quality Checks:**
+   625	- [ ] Small flowchart only if decision non-obvious
+   626	- [ ] Quick reference table
+   627	- [ ] Common mistakes section
+   628	- [ ] No narrative storytelling
+   629	- [ ] Supporting files only for tools or heavy reference
+   630	
+   631	**Deployment:**
+   632	- [ ] Commit skill to git and push to your fork (if configured)
+   633	- [ ] Consider contributing back via PR (if broadly useful)
+   634	
+   635	## Discovery Workflow
+   636	
+   637	How future Claude finds your skill:
+   638	
+   639	1. **Encounters problem** ("tests are flaky")
+   640	3. **Finds SKILL** (description matches)
+   641	4. **Scans overview** (is this relevant?)
+   642	5. **Reads patterns** (quick reference table)
+   643	6. **Loads example** (only when implementing)
+   644	
+   645	**Optimize for this flow** - put searchable terms early and often.
+   646	
+   647	## The Bottom Line
+   648	
+   649	**Creating skills IS TDD for process documentation.**
+   650	
+   651	Same Iron Law: No skill without failing test first.
+   652	Same cycle: RED (baseline) → GREEN (write skill) → REFACTOR (close loopholes).
+   653	Same benefits: Better quality, fewer surprises, bulletproof results.
+   654	
+   655	If you follow TDD for code, follow it for skills. It's the same discipline applied to documentation.
+
+hook: PostToolUse
+hook: PostToolUse Completed
+codex
+`writing-skills` requires the in-repo TDD skill as background, so I’m reading that dependency before judging whether the plan’s test sequence is sufficient.
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc 'nl -ba skills/test-driven-development/SKILL.md' in /Users/kakao1/.codex/jstack
+ succeeded in 0ms:
+     1	---
+     2	name: test-driven-development
+     3	description: Use when implementing any feature or bugfix, before writing implementation code
+     4	---
+     5	
+     6	# Test-Driven Development (TDD)
+     7	
+     8	## Overview
+     9	
+    10	Write the test first. Watch it fail. Write minimal code to pass.
+    11	
+    12	**Core principle:** If you didn't watch the test fail, you don't know if it tests the right thing.
+    13	
+    14	**Violating the letter of the rules is violating the spirit of the rules.**
+    15	
+    16	## When to Use
+    17	
+    18	**Always — for logic that passes the test qualification gate in
+    19	jstack:simplest-thing (branches, loops, parsers, money/security boundaries,
+    20	data-loss paths):**
+    21	- New features
+    22	- Bug fixes
+    23	- Refactoring
+    24	- Behavior changes
+    25	
+    26	Logic that fails the gate (trivial one-liners, glue code, pure delegation)
+    27	needs no test. The gate decides with objective criteria, not "feels simple."
+    28	
+    29	**Exceptions (ask your human partner):**
+    30	- Throwaway prototypes
+    31	- Generated code
+    32	- Configuration files
+    33	
+    34	Thinking "skip TDD just this once"? Stop. That's rationalization.
+    35	
+    36	## The Iron Law
+    37	
+    38	```
+    39	NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
+    40	```
+    41	
+    42	Scope: this law binds all logic that passes the test qualification gate
+    43	(jstack:simplest-thing). Code that does not qualify for a test does not enter
+    44	this cycle — but when a test is warranted, it comes first, always.
+    45	
+    46	Write gate-qualifying code before the test? Delete it. Start over.
+    47	
+    48	**No exceptions:**
+    49	- Don't keep it as "reference"
+    50	- Don't "adapt" it while writing tests
+    51	- Don't look at it
+    52	- Delete means delete
+    53	
+    54	Implement fresh from tests. Period.
+    55	
+    56	## Red-Green-Refactor
+    57	
+    58	```dot
+    59	digraph tdd_cycle {
+    60	    rankdir=LR;
+    61	    red [label="RED\nWrite failing test", shape=box, style=filled, fillcolor="#ffcccc"];
+    62	    verify_red [label="Verify fails\ncorrectly", shape=diamond];
+    63	    green [label="GREEN\nMinimal code", shape=box, style=filled, fillcolor="#ccffcc"];
+    64	    verify_green [label="Verify passes\nAll green", shape=diamond];
+    65	    refactor [label="REFACTOR\nClean up", shape=box, style=filled, fillcolor="#ccccff"];
+    66	    next [label="Next", shape=ellipse];
+    67	
+    68	    red -> verify_red;
+    69	    verify_red -> green [label="yes"];
+    70	    verify_red -> red [label="wrong\nfailure"];
+    71	    green -> verify_green;
+    72	    verify_green -> refactor [label="yes"];
+    73	    verify_green -> green [label="no"];
+    74	    refactor -> verify_green [label="stay\ngreen"];
+    75	    verify_green -> next;
+    76	    next -> red;
+    77	}
+    78	```
+    79	
+    80	### RED - Write Failing Test
+    81	
+    82	Write one minimal test showing what should happen.
+    83	
+    84	<Good>
+    85	```typescript
+    86	test('retries failed operations 3 times', async () => {
+    87	  let attempts = 0;
+    88	  const operation = () => {
+    89	    attempts++;
+    90	    if (attempts < 3) throw new Error('fail');
+    91	    return 'success';
+    92	  };
+    93	
+    94	  const result = await retryOperation(operation);
+    95	
+    96	  expect(result).toBe('success');
+    97	  expect(attempts).toBe(3);
+    98	});
+    99	```
+   100	Clear name, tests real behavior, one thing
+   101	</Good>
+   102	
+   103	<Bad>
+   104	```typescript
+   105	test('retry works', async () => {
+   106	  const mock = jest.fn()
+   107	    .mockRejectedValueOnce(new Error())
+   108	    .mockRejectedValueOnce(new Error())
+   109	    .mockResolvedValueOnce('success');
+   110	  await retryOperation(mock);
+   111	  expect(mock).toHaveBeenCalledTimes(3);
+   112	});
+   113	```
+   114	Vague name, tests mock not code
+   115	</Bad>
+   116	
+   117	**Requirements:**
+   118	- One behavior
+   119	- Clear name
+   120	- Real code (no mocks unless unavoidable)
+   121	
+   122	### Verify RED - Watch It Fail
+   123	
+   124	**MANDATORY. Never skip.**
+   125	
+   126	```bash
+   127	npm test path/to/test.test.ts
+   128	```
+   129	
+   130	Confirm:
+   131	- Test fails (not errors)
+   132	- Failure message is expected
+   133	- Fails because feature missing (not typos)
+   134	
+   135	**Test passes?** You're testing existing behavior. Fix test.
+   136	
+   137	**Test errors?** Fix error, re-run until it fails correctly.
+   138	
+   139	### GREEN - Minimal Code
+   140	
+   141	Write simplest code to pass the test.
+   142	
+   143	<Good>
+   144	```typescript
+   145	async function retryOperation<T>(fn: () => Promise<T>): Promise<T> {
+   146	  for (let i = 0; i < 3; i++) {
+   147	    try {
+   148	      return await fn();
+   149	    } catch (e) {
+   150	      if (i === 2) throw e;
+   151	    }
+   152	  }
+   153	  throw new Error('unreachable');
+   154	}
+   155	```
+   156	Just enough to pass
+   157	</Good>
+   158	
+   159	<Bad>
+   160	```typescript
+   161	async function retryOperation<T>(
+   162	  fn: () => Promise<T>,
+   163	  options?: {
+   164	    maxRetries?: number;
+   165	    backoff?: 'linear' | 'exponential';
+   166	    onRetry?: (attempt: number) => void;
+   167	  }
+   168	): Promise<T> {
+   169	  // YAGNI
+   170	}
+   171	```
+   172	Over-engineered
+   173	</Bad>
+   174	
+   175	Don't add features, refactor other code, or "improve" beyond the test.
+   176	
+   177	### Verify GREEN - Watch It Pass
+   178	
+   179	**MANDATORY.**
+   180	
+   181	```bash
+   182	npm test path/to/test.test.ts
+   183	```
+   184	
+   185	Confirm:
+   186	- Test passes
+   187	- Other tests still pass
+   188	- Output pristine (no errors, warnings)
+   189	
+   190	**Test fails?** Fix code, not test.
+   191	
+   192	**Other tests fail?** Fix now.
+   193	
+   194	### REFACTOR - Clean Up
+   195	
+   196	After green only:
+   197	- Remove duplication
+   198	- Improve names
+   199	- Extract helpers
+   200	
+   201	Keep tests green. Don't add behavior.
+   202	
+   203	### Repeat
+   204	
+   205	Next failing test for next feature.
+   206	
+   207	## Good Tests
+   208	
+   209	| Quality | Good | Bad |
+   210	|---------|------|-----|
+   211	| **Minimal** | One thing. "and" in name? Split it. | `test('validates email and domain and whitespace')` |
+   212	| **Clear** | Name describes behavior | `test('test1')` |
+   213	| **Shows intent** | Demonstrates desired API | Obscures what code should do |
+   214	
+   215	## Why Order Matters
+   216	
+   217	Tests written after the code pass immediately — and passing immediately proves nothing: the test might check the wrong thing, test the implementation instead of the behavior, or miss the edge case you forgot. You never saw it catch the bug.
+   218	
+   219	Test-first forces you to watch the test fail, which proves it actually tests something. It also forces edge-case discovery *before* implementing, instead of verifying only the cases you happened to remember.
+   220	
+   221	Tests-after answer "what does this do?" Tests-first answer "what should this do?" Coverage added after the fact is not TDD — you get the coverage but lose the proof the tests work.
+   222	
+   223	## Common Rationalizations
+   224	
+   225	| Excuse | Reality |
+   226	|--------|---------|
+   227	| "Too simple to test" | Feelings don't decide — the qualification gate does (branch/loop/parse/money/security). Qualifies? Test it. Doesn't? Skip it deliberately. |
+   228	| "I'll test after" | Tests passing immediately prove nothing. |
+   229	| "Tests after achieve same goals" | Tests-after = "what does this do?" Tests-first = "what should this do?" |
+   230	| "Already manually tested" | Ad-hoc ≠ systematic. No record, can't re-run. |
+   231	| "Deleting X hours is wasteful" | Sunk cost fallacy. Keeping unverified code is technical debt. |
+   232	| "Keep as reference, write tests first" | You'll adapt it. That's testing after. Delete means delete. |
+   233	| "Need to explore first" | Fine. Throw away exploration, start with TDD. |
+   234	| "Test hard = design unclear" | Listen to test. Hard to test = hard to use. |
+   235	| "TDD will slow me down" | TDD faster than debugging. Pragmatic = test-first. |
+   236	| "Manual test faster" | Manual doesn't prove edge cases. You'll re-test every change. |
+   237	| "Existing code has no tests" | You're improving it. Add tests for existing code. |
+   238	
+   239	## Red Flags - STOP and Start Over
+   240	
+   241	- Code before test
+   242	- Test after implementation
+   243	- Test passes immediately
+   244	- Can't explain why test failed
+   245	- Tests added "later"
+   246	- Rationalizing "just this once"
+   247	- "I already manually tested it"
+   248	- "Tests after achieve the same purpose"
+   249	- "It's about spirit not ritual"
+   250	- "Keep as reference" or "adapt existing code"
+   251	- "Already spent X hours, deleting is wasteful"
+   252	- "TDD is dogmatic, I'm being pragmatic"
+   253	- "This is different because..."
+   254	
+   255	**All of these mean: Delete code. Start over with TDD.**
+   256	
+   257	## Example: Bug Fix
+   258	
+   259	**Bug:** Empty email accepted
+   260	
+   261	**RED**
+   262	```typescript
+   263	test('rejects empty email', async () => {
+   264	  const result = await submitForm({ email: '' });
+   265	  expect(result.error).toBe('Email required');
+   266	});
+   267	```
+   268	
+   269	**Verify RED**
+   270	```bash
+   271	$ npm test
+   272	FAIL: expected 'Email required', got undefined
+   273	```
+   274	
+   275	**GREEN**
+   276	```typescript
+   277	function submitForm(data: FormData) {
+   278	  if (!data.email?.trim()) {
+   279	    return { error: 'Email required' };
+   280	  }
+   281	  // ...
+   282	}
+   283	```
+   284	
+   285	**Verify GREEN**
+   286	```bash
+   287	$ npm test
+   288	PASS
+   289	```
+   290	
+   291	**REFACTOR**
+   292	Extract validation for multiple fields if needed.
+   293	
+   294	## Verification Checklist
+   295	
+   296	Before marking work complete:
+   297	
+   298	- [ ] Every gate-qualifying function/method has a test (jstack:simplest-thing gate)
+   299	- [ ] Watched each test fail before implementing
+   300	- [ ] Each test failed for expected reason (feature missing, not typo)
+   301	- [ ] Wrote minimal code to pass each test
+   302	- [ ] All tests pass
+   303	- [ ] Output pristine (no errors, warnings)
+   304	- [ ] Tests use real code (mocks only if unavoidable)
+   305	- [ ] Edge cases and errors covered
+   306	
+   307	Can't check all boxes? You skipped TDD. Start over.
+   308	
+   309	## When Stuck
+   310	
+   311	| Problem | Solution |
+   312	|---------|----------|
+   313	| Don't know how to test | Write wished-for API. Write assertion first. Ask your human partner. |
+   314	| Test too complicated | Design too complicated. Simplify interface. |
+   315	| Must mock everything | Code too coupled. Use dependency injection. |
+   316	| Test setup huge | Extract helpers. Still complex? Simplify design. |
+   317	
+   318	## Debugging Integration
+   319	
+   320	Bug found? Write failing test reproducing it. Follow TDD cycle. Test proves fix and prevents regression.
+   321	
+   322	Never fix bugs without a test.
+   323	
+   324	## Testing Anti-Patterns
+   325	
+   326	When adding mocks or test utilities, read @testing-anti-patterns.md to avoid common pitfalls:
+   327	- Testing mock behavior instead of real behavior
+   328	- Adding test-only methods to production classes
+   329	- Mocking without understanding dependencies
+   330	
+   331	## Final Rule
+   332	
+   333	```
+   334	Production code → test exists and failed first
+   335	Otherwise → not TDD
+   336	```
+   337	
+   338	No exceptions without your human partner's permission.
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "nl -ba tests/jstack-static/run.sh | sed -n '1,100p'
+nl -ba tests/skill-triggering/run-all.sh | sed -n '1,80p'
+nl -ba skills/subagent-driven-development/SKILL.md | sed -n '60,82p'
+nl -ba skills/using-jstack/references/codex-tools.md | sed -n '15,35p'
+nl -ba skills/requesting-code-review/SKILL.md
+nl -ba skills/receiving-code-review/SKILL.md | sed -n '1,220p'
+nl -ba package.json
+nl -ba .claude-plugin/marketplace.json
+nl -ba .version-bump.json" in /Users/kakao1/.codex/jstack
+ succeeded in 0ms:
+     1	#!/usr/bin/env bash
+     2	set -euo pipefail
+     3	
+     4	ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+     5	cd "$ROOT"
+     6	
+     7	fail() {
+     8	  echo "[FAIL] $*" >&2
+     9	  exit 1
+    10	}
+    11	
+    12	json_name() {
+    13	  python3 - "$1" <<'PY'
+    14	import json, sys
+    15	with open(sys.argv[1], encoding="utf-8") as f:
+    16	    print(json.load(f).get("name", ""))
+    17	PY
+    18	}
+    19	
+    20	[[ "$(json_name package.json)" == "jstack" ]] || fail "package.json name must be jstack"
+    21	[[ "$(json_name .claude-plugin/plugin.json)" == "jstack" ]] || fail ".claude-plugin/plugin.json name must be jstack"
+    22	[[ "$(json_name .cursor-plugin/plugin.json)" == "jstack" ]] || fail ".cursor-plugin/plugin.json name must be jstack"
+    23	[[ "$(json_name gemini-extension.json)" == "jstack" ]] || fail "gemini-extension.json name must be jstack"
+    24	
+    25	[[ -f skills/peer-review/SKILL.md ]] || fail "skills/peer-review/SKILL.md is required"
+    26	grep -q 'codex -m gpt-5.6-sol review' skills/peer-review/SKILL.md || fail "Codex review must pin GPT-5.6 Sol before the review subcommand"
+    27	! rg -q 'gpt-5\.5' skills/peer-review/SKILL.md skills/writing-plans/SKILL.md || fail "active peer-review guidance must not pin GPT-5.5"
+    28	grep -q -- '--add-dir "$REPO_ROOT" -- "Reply with OK."' skills/peer-review/SKILL.md || fail "Claude reviewer preflight must terminate --add-dir before prompt"
+    29	grep -q "stdin=subprocess.DEVNULL" skills/peer-review/SKILL.md || fail "Claude subprocess reviewer guidance must close stdin"
+    30	grep -q "docs/jstack/specs" skills/brainstorming/SKILL.md || fail "brainstorming must write specs under docs/jstack/specs"
+    31	grep -q "Problem Framing Gate" skills/brainstorming/SKILL.md || fail "brainstorming must include Problem Framing Gate"
+    32	grep -q "docs/jstack/plans" skills/writing-plans/SKILL.md || fail "writing-plans must write plans under docs/jstack/plans"
+    33	grep -q "JSTACK REVIEW REPORT" skills/writing-plans/SKILL.md || fail "writing-plans must define JSTACK REVIEW REPORT"
+    34	grep -q "tracer bullet" skills/writing-plans/SKILL.md || fail "writing-plans must include tracer bullet decomposition guidance"
+    35	grep -q "horizontal slice" skills/writing-plans/SKILL.md || fail "writing-plans must guard against horizontal slice tasks"
+    36	grep -q "jstack:peer-review plan" skills/brainstorming/SKILL.md || fail "brainstorming must route specs through peer-review"
+    37	grep -q "CONTEXT.md" skills/brainstorming/SKILL.md || fail "brainstorming must include lazy domain context guidance"
+    38	grep -q "ADR" skills/brainstorming/SKILL.md || fail "brainstorming must include lazy ADR guidance"
+    39	grep -q "jstack:peer-review plan" skills/writing-plans/SKILL.md || fail "writing-plans must route plans through peer-review"
+    40	grep -q "jstack:peer-review challenge" skills/subagent-driven-development/SKILL.md || fail "subagent-driven-development must include risk-based peer-review challenge"
+    41	grep -q "jstack:peer-review challenge" skills/executing-plans/SKILL.md || fail "executing-plans must include risk-based peer-review challenge"
+    42	! rg -q "Alternating Model Review|GPT-5\\.4 review|Opus review" skills/brainstorming/SKILL.md skills/writing-plans/SKILL.md || fail "old alternating model review loop must not remain in planning gates"
+    43	
+    44	grep -q "jstack:" skills/writing-plans/SKILL.md || fail "writing-plans must reference jstack skill namespace"
+    45	grep -q "jstack:" skills/subagent-driven-development/SKILL.md || fail "subagent-driven-development must reference jstack skill namespace"
+    46	grep -q "jstack:" skills/requesting-code-review/SKILL.md || fail "requesting-code-review must reference jstack skill namespace"
+    47	[[ -x skills/systematic-debugging/scripts/hitl-loop.template.sh ]] || fail "systematic-debugging must include executable HITL loop template"
+    48	grep -q "hitl-loop.template.sh" skills/systematic-debugging/SKILL.md || fail "systematic-debugging must reference HITL loop template"
+    49	[[ -f skills/brainstorming/context-format.md ]] || fail "brainstorming must include CONTEXT.md format reference"
+    50	[[ -f skills/brainstorming/adr-format.md ]] || fail "brainstorming must include ADR format reference"
+    51	[[ -f skills/architecture-deepening/SKILL.md ]] || fail "architecture-deepening skill is required"
+    52	grep -q "deletion test" skills/architecture-deepening/SKILL.md || fail "architecture-deepening must include deletion test guidance"
+    53	[[ -f skills/writing-plans/agent-brief-template.md ]] || fail "writing-plans must include long-lived agent brief template"
+    54	grep -q "Agent Brief" skills/writing-plans/agent-brief-template.md || fail "writing-plans must include long-lived agent brief template"
+    55	
+    56	[[ -x scripts/sync-local-hosts.sh ]] || fail "scripts/sync-local-hosts.sh must exist and be executable"
+    57	scripts/sync-local-hosts.sh --dry-run >/tmp/jstack-sync-dry-run.out
+    58	grep -q "Codex skill link" /tmp/jstack-sync-dry-run.out || fail "sync dry-run must report Codex skill link"
+    59	grep -q "Claude" /tmp/jstack-sync-dry-run.out || fail "sync dry-run must report Claude status"
+    60	
+    61	echo "[PASS] jstack static contract"
+     1	#!/usr/bin/env bash
+     2	# Run all skill triggering tests
+     3	# Usage: ./run-all.sh
+     4	
+     5	set -e
+     6	
+     7	SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+     8	PROMPTS_DIR="$SCRIPT_DIR/prompts"
+     9	
+    10	SKILLS=(
+    11	    "systematic-debugging"
+    12	    "test-driven-development"
+    13	    "writing-plans"
+    14	    "dispatching-parallel-agents"
+    15	    "executing-plans"
+    16	    "requesting-code-review"
+    17	)
+    18	
+    19	echo "=== Running Skill Triggering Tests ==="
+    20	echo ""
+    21	
+    22	PASSED=0
+    23	FAILED=0
+    24	RESULTS=()
+    25	
+    26	for skill in "${SKILLS[@]}"; do
+    27	    prompt_file="$PROMPTS_DIR/${skill}.txt"
+    28	
+    29	    if [ ! -f "$prompt_file" ]; then
+    30	        echo "⚠️  SKIP: No prompt file for $skill"
+    31	        continue
+    32	    fi
+    33	
+    34	    echo "Testing: $skill"
+    35	
+    36	    if "$SCRIPT_DIR/run-test.sh" "$skill" "$prompt_file" 3 2>&1 | tee /tmp/skill-test-$skill.log; then
+    37	        PASSED=$((PASSED + 1))
+    38	        RESULTS+=("✅ $skill")
+    39	    else
+    40	        FAILED=$((FAILED + 1))
+    41	        RESULTS+=("❌ $skill")
+    42	    fi
+    43	
+    44	    echo ""
+    45	    echo "---"
+    46	    echo ""
+    47	done
+    48	
+    49	echo ""
+    50	echo "=== Summary ==="
+    51	for result in "${RESULTS[@]}"; do
+    52	    echo "  $result"
+    53	done
+    54	echo ""
+    55	echo "Passed: $PASSED"
+    56	echo "Failed: $FAILED"
+    57	
+    58	if [ $FAILED -gt 0 ]; then
+    59	    exit 1
+    60	fi
+    60	**Split a plan task into smaller slices when:**
+    61	- It touches unrelated files or subsystems.
+    62	- It has separable tests that can pass independently.
+    63	- The implementer would need to hold too many details in context.
+    64	- Reviewers would struggle to distinguish spec compliance from code quality.
+    65	
+    66	**Switch to inline execution instead when:**
+    67	- Almost every task depends on hidden state from the previous one.
+    68	- The work is diagnosis/debugging where test output changes the next step.
+    69	- The environment depends on live services, credentials, long-running processes, or shared local state.
+    70	- Slicing would create more coordination cost than implementation cost.
+    71	
+    72	Record the chosen slices in TodoWrite with enough detail to show why each slice is isolated, grouped, or split.
+    73	
+    74	When consecutive plan tasks are tagged `parallel-safe` and share no files or state, dispatch them concurrently in one batch via jstack:dispatching-parallel-agents — do not run them sequentially.
+    75	
+    76	**Checkout altitude:** all slices in this skill share ONE checkout (the current worktree) — subagents parallelize *within* it. Never create additional worktrees per slice; a slice is a commit unit, not a checkout unit. A separate Orca worktree (jstack:using-git-worktrees Step 1a) is only for a genuinely independent plan/feature that deserves its own card and branch.
+    77	
+    78	**Progress visibility:** if the current checkout is Orca-managed, refresh the card as each slice completes — `orca worktree set --worktree active --comment "slice <n>/<total> done: <slice name>"` — and set `--workspace-status in-review` when entering final review. This is the user's monitoring surface, not a check-in prompt; continuous execution still applies.
+    79	
+    80	## Review Intensity
+    81	
+    82	Pick the review gate per slice. Do not skip review; choose the right size.
+    15	
+    16	## Subagent dispatch requires multi-agent support
+    17	
+    18	Add to your Codex config (`~/.codex/config.toml`):
+    19	
+    20	```toml
+    21	[features]
+    22	multi_agent = true
+    23	```
+    24	
+    25	This enables `spawn_agent`, `wait`, and `close_agent` for skills like `dispatching-parallel-agents` and `subagent-driven-development`.
+    26	
+    27	## Subagent dispatch
+    28	
+    29	jstack skills dispatch reviewer/implementer subagents via `Task (general-purpose)`
+    30	with an inline prompt (filled from the skill's local template, e.g.
+    31	`subagent-driven-development/code-reviewer.md` or `code-quality-reviewer-prompt.md`).
+    32	On Codex, route this to `spawn_agent(message=...)` with the filled prompt content.
+    33	
+    34	### Message framing
+    35	
+     1	---
+     2	name: requesting-code-review
+     3	description: Use when completing tasks, implementing major features, or before merging to verify work meets requirements
+     4	---
+     5	
+     6	# Requesting Code Review
+     7	
+     8	This skill is consolidated into **jstack:peer-review**. Use `jstack:peer-review` with mode `review` (diff against base) or `plan` (spec/plan). peer-review owns reviewer routing (Codex/Claude), the prompt boundary, commands, artifacts, and finding triage. See the `## When to Request` and `## Red Flags` sections there.
+     1	---
+     2	name: receiving-code-review
+     3	description: Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation
+     4	---
+     5	
+     6	# Code Review Reception
+     7	
+     8	## The Response Pattern
+     9	
+    10	```
+    11	WHEN receiving code review feedback:
+    12	
+    13	1. READ: Complete feedback without reacting
+    14	2. UNDERSTAND: Restate requirement in own words (or ask)
+    15	3. VERIFY: Check against codebase reality
+    16	4. EVALUATE: Technically sound for THIS codebase?
+    17	5. RESPOND: Technical acknowledgment or reasoned pushback
+    18	6. IMPLEMENT: One item at a time, test each
+    19	```
+    20	
+    21	## Forbidden Responses
+    22	
+    23	**NEVER:**
+    24	- "You're absolutely right!" (explicit CLAUDE.md violation)
+    25	- "Great point!" / "Excellent feedback!" (performative)
+    26	- "Let me implement that now" (before verification)
+    27	
+    28	**INSTEAD:**
+    29	- Restate the technical requirement
+    30	- Ask clarifying questions
+    31	- Push back with technical reasoning if wrong
+    32	- Just start working (actions > words)
+    33	
+    34	## Handling Unclear Feedback
+    35	
+    36	```
+    37	IF any item is unclear:
+    38	  STOP - do not implement anything yet
+    39	  ASK for clarification on unclear items
+    40	
+    41	WHY: Items may be related. Partial understanding = wrong implementation.
+    42	```
+    43	
+    44	**Example:**
+    45	```
+    46	your human partner: "Fix 1-6"
+    47	You understand 1,2,3,6. Unclear on 4,5.
+    48	
+    49	❌ WRONG: Implement 1,2,3,6 now, ask about 4,5 later
+    50	✅ RIGHT: "I understand items 1,2,3,6. Need clarification on 4 and 5 before proceeding."
+    51	```
+    52	
+    53	## Source-Specific Handling
+    54	
+    55	### From your human partner
+    56	- **Trusted** - implement after understanding
+    57	- **Still ask** if scope unclear
+    58	- **No performative agreement**
+    59	- **Skip to action** or technical acknowledgment
+    60	
+    61	### From External Reviewers
+    62	```
+    63	BEFORE implementing:
+    64	  1. Check: Technically correct for THIS codebase?
+    65	  2. Check: Breaks existing functionality?
+    66	  3. Check: Reason for current implementation?
+    67	  4. Check: Works on all platforms/versions?
+    68	  5. Check: Does reviewer understand full context?
+    69	
+    70	IF suggestion seems wrong:
+    71	  Push back with technical reasoning
+    72	
+    73	IF can't easily verify:
+    74	  Say so: "I can't verify this without [X]. Should I [investigate/ask/proceed]?"
+    75	
+    76	IF conflicts with your human partner's prior decisions:
+    77	  Stop and discuss with your human partner first
+    78	```
+    79	
+    80	**your human partner's rule:** "External feedback - be skeptical, but check carefully"
+    81	
+    82	## YAGNI Check for "Professional" Features
+    83	
+    84	```
+    85	IF reviewer suggests "implementing properly":
+    86	  grep codebase for actual usage
+    87	
+    88	  IF unused: "This endpoint isn't called. Remove it (YAGNI)?"
+    89	  IF used: Then implement properly
+    90	```
+    91	
+    92	**your human partner's rule:** "You and reviewer both report to me. If we don't need this feature, don't add it."
+    93	
+    94	## Implementation Order
+    95	
+    96	```
+    97	FOR multi-item feedback:
+    98	  1. Clarify anything unclear FIRST
+    99	  2. Then implement in this order:
+   100	     - Blocking issues (breaks, security)
+   101	     - Simple fixes (typos, imports)
+   102	     - Complex fixes (refactoring, logic)
+   103	  3. Test each fix individually
+   104	  4. Verify no regressions
+   105	```
+   106	
+   107	## When To Push Back
+   108	
+   109	Push back when:
+   110	- Suggestion breaks existing functionality
+   111	- Reviewer lacks full context
+   112	- Violates YAGNI (unused feature)
+   113	- Technically incorrect for this stack
+   114	- Legacy/compatibility reasons exist
+   115	- Conflicts with your human partner's architectural decisions
+   116	
+   117	**How to push back:**
+   118	- Use technical reasoning, not defensiveness
+   119	- Ask specific questions
+   120	- Reference working tests/code
+   121	- Involve your human partner if architectural
+   122	
+   123	**Signal if uncomfortable pushing back out loud:** "Strange things are afoot at the Circle K"
+   124	
+   125	## Acknowledging Correct Feedback
+   126	
+   127	When feedback IS correct:
+   128	```
+   129	✅ "Fixed. [Brief description of what changed]"
+   130	✅ "Good catch - [specific issue]. Fixed in [location]."
+   131	✅ [Just fix it and show in the code]
+   132	
+   133	❌ "You're absolutely right!"
+   134	❌ "Great point!"
+   135	❌ "Thanks for catching that!"
+   136	❌ "Thanks for [anything]"
+   137	❌ ANY gratitude expression
+   138	```
+   139	
+   140	**Why no thanks:** Actions speak. Just fix it. The code itself shows you heard the feedback.
+   141	
+   142	**If you catch yourself about to write "Thanks":** DELETE IT. State the fix instead.
+   143	
+   144	## Gracefully Correcting Your Pushback
+   145	
+   146	If you pushed back and were wrong:
+   147	```
+   148	✅ "You were right - I checked [X] and it does [Y]. Implementing now."
+   149	✅ "Verified this and you're correct. My initial understanding was wrong because [reason]. Fixing."
+   150	
+   151	❌ Long apology
+   152	❌ Defending why you pushed back
+   153	❌ Over-explaining
+   154	```
+   155	
+   156	State the correction factually and move on.
+   157	
+   158	## Common Mistakes
+   159	
+   160	| Mistake | Fix |
+   161	|---------|-----|
+   162	| Performative agreement | State requirement or just act |
+   163	| Blind implementation | Verify against codebase first |
+   164	| Batch without testing | One at a time, test each |
+   165	| Assuming reviewer is right | Check if breaks things |
+   166	| Avoiding pushback | Technical correctness > comfort |
+   167	| Partial implementation | Clarify all items first |
+   168	| Can't verify, proceed anyway | State limitation, ask for direction |
+   169	
+   170	## Real Examples
+   171	
+   172	**Performative Agreement (Bad):**
+   173	```
+   174	Reviewer: "Remove legacy code"
+   175	❌ "You're absolutely right! Let me remove that..."
+   176	```
+   177	
+   178	**Technical Verification (Good):**
+   179	```
+   180	Reviewer: "Remove legacy code"
+   181	✅ "Checking... build target is 10.15+, this API needs 13+. Need legacy for backward compat. Current impl has wrong bundle ID - fix it or drop pre-13 support?"
+   182	```
+   183	
+   184	**YAGNI (Good):**
+   185	```
+   186	Reviewer: "Implement proper metrics tracking with database, date filters, CSV export"
+   187	✅ "Grepped codebase - nothing calls this endpoint. Remove it (YAGNI)? Or is there usage I'm missing?"
+   188	```
+   189	
+   190	**Unclear Item (Good):**
+   191	```
+   192	your human partner: "Fix items 1-6"
+   193	You understand 1,2,3,6. Unclear on 4,5.
+   194	✅ "Understand 1,2,3,6. Need clarification on 4 and 5 before implementing."
+   195	```
+   196	
+   197	## GitHub Thread Replies
+   198	
+   199	When replying to inline review comments on GitHub, reply in the comment thread (`gh api repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies`), not as a top-level PR comment.
+     1	{
+     2	  "name": "jstack",
+     3	  "version": "5.5.1",
+     4	  "author": "jerry",
+     5	  "type": "module",
+     6	  "main": ".opencode/plugins/jstack.js"
+     7	}
+     1	{
+     2	  "name": "jstack-dev",
+     3	  "owner": {
+     4	    "name": "jerry"
+     5	  },
+     6	  "metadata": {
+     7	    "description": "Development marketplace for the local JStack skills library",
+     8	    "version": "5.5.1"
+     9	  },
+    10	  "plugins": [
+    11	    {
+    12	      "name": "jstack",
+    13	      "description": "Local skills library for Claude Code and Codex: planning, TDD, peer review, debugging, and delivery workflows",
+    14	      "version": "5.5.1",
+    15	      "source": "./",
+    16	      "author": {
+    17	        "name": "jerry"
+    18	      }
+    19	    }
+    20	  ]
+    21	}
+     1	{
+     2	  "files": [
+     3	    { "path": "package.json", "field": "version" },
+     4	    { "path": ".claude-plugin/plugin.json", "field": "version" },
+     5	    { "path": ".cursor-plugin/plugin.json", "field": "version" },
+     6	    { "path": ".claude-plugin/marketplace.json", "field": "metadata.version" },
+     7	    { "path": ".claude-plugin/marketplace.json", "field": "plugins.0.version" },
+     8	    { "path": "gemini-extension.json", "field": "version" }
+     9	  ],
+    10	  "audit": {
+    11	    "exclude": [
+    12	      "CHANGELOG.md",
+    13	      "RELEASE-NOTES.md",
+    14	      "node_modules",
+    15	      ".git",
+    16	      ".version-bump.json",
+    17	      "scripts/bump-version.sh"
+    18	    ]
+    19	  }
+    20	}
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc 'wc -w skills/requesting-code-review/SKILL.md skills/receiving-code-review/SKILL.md skills/peer-review/SKILL.md skills/brainstorming/SKILL.md skills/systematic-debugging/SKILL.md skills/writing-skills/SKILL.md skills/subagent-driven-development/SKILL.md
+find skills -mindepth 1 -maxdepth 1 -type d | wc -l
+git status --short
+git log -1 --oneline' in /Users/kakao1/.codex/jstack
+ succeeded in 0ms:
+      66 skills/requesting-code-review/SKILL.md
+     882 skills/receiving-code-review/SKILL.md
+    1498 skills/peer-review/SKILL.md
+    2620 skills/brainstorming/SKILL.md
+    1589 skills/systematic-debugging/SKILL.md
+    3212 skills/writing-skills/SKILL.md
+    3274 skills/subagent-driven-development/SKILL.md
+   13141 total
+      19
+git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead
+git: error: couldn't create cache file '/tmp/xcrun_db-hutgxg7T' (errno=Operation not permitted)
+git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead
+git: error: couldn't create cache file '/tmp/xcrun_db-97UZusgX' (errno=Operation not permitted)
+?? .jstack/artifacts/peer-review-codex-plan-20260720T090205Z.raw
+git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead
+git: error: couldn't create cache file '/tmp/xcrun_db-UoKz2n50' (errno=Operation not permitted)
+git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead
+git: error: couldn't create cache file '/tmp/xcrun_db-BGZ6bNrx' (errno=Operation not permitted)
+62caf60 docs(spec): i-have-adhd Output Contract integration + skill cleanup design (JEP-495)
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "find skills -mindepth 1 -maxdepth 1 -type d -print | sort | nl -ba
+rg -n '"'^name:'"' skills/*/SKILL.md | sort" in /Users/kakao1/.codex/jstack
+ succeeded in 0ms:
+     1	skills/.claude
+     2	skills/architecture-deepening
+     3	skills/brainstorming
+     4	skills/dispatching-parallel-agents
+     5	skills/executing-plans
+     6	skills/finishing-a-development-branch
+     7	skills/peer-review
+     8	skills/project-management
+     9	skills/receiving-code-review
+    10	skills/requesting-code-review
+    11	skills/simplest-thing
+    12	skills/subagent-driven-development
+    13	skills/systematic-debugging
+    14	skills/test-driven-development
+    15	skills/using-git-worktrees
+    16	skills/using-jstack
+    17	skills/verification-before-completion
+    18	skills/writing-plans
+    19	skills/writing-skills
+skills/architecture-deepening/SKILL.md:2:name: architecture-deepening
+skills/brainstorming/SKILL.md:2:name: brainstorming
+skills/dispatching-parallel-agents/SKILL.md:2:name: dispatching-parallel-agents
+skills/executing-plans/SKILL.md:2:name: executing-plans
+skills/finishing-a-development-branch/SKILL.md:2:name: finishing-a-development-branch
+skills/peer-review/SKILL.md:2:name: peer-review
+skills/project-management/SKILL.md:2:name: project-management
+skills/receiving-code-review/SKILL.md:2:name: receiving-code-review
+skills/requesting-code-review/SKILL.md:2:name: requesting-code-review
+skills/simplest-thing/SKILL.md:2:name: simplest-thing
+skills/subagent-driven-development/SKILL.md:2:name: subagent-driven-development
+skills/systematic-debugging/SKILL.md:2:name: systematic-debugging
+skills/test-driven-development/SKILL.md:2:name: test-driven-development
+skills/using-git-worktrees/SKILL.md:2:name: using-git-worktrees
+skills/using-jstack/SKILL.md:2:name: using-jstack
+skills/verification-before-completion/SKILL.md:2:name: verification-before-completion
+skills/writing-plans/SKILL.md:2:name: writing-plans
+skills/writing-skills/SKILL.md:107:name: Skill-Name-With-Hyphens
+skills/writing-skills/SKILL.md:2:name: writing-skills
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc 'ls -la skills/.claude
+find skills/.claude -maxdepth 3 -type f -print | sort' in /Users/kakao1/.codex/jstack
+ succeeded in 0ms:
+total 0
+drwxr-xr-x@  2 kakao1  staff   64 Jun 13 01:34 .
+drwxr-xr-x@ 21 kakao1  staff  672 Jul  2 09:05 ..
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "nl -ba skills/peer-review/SKILL.md | sed -n '1,55p;228,260p'
+rg -n 'feedback|performative|agreement|verify|push back|triage' skills/peer-review/SKILL.md" in /Users/kakao1/.codex/jstack
+ succeeded in 0ms:
+     1	---
+     2	name: peer-review
+     3	description: Use when an independent outside review is needed for a diff, plan, spec, security-sensitive change, live-risk workflow, or adversarial challenge.
+     4	---
+     5	
+     6	# Peer Review
+     7	
+     8	Get the opposite primary agent to review the work. In Codex, ask Claude. In Claude
+     9	Code, ask Codex. The reviewer is read-only and advisory. The active agent evaluates
+    10	findings before applying anything.
+    11	
+    12	## Modes
+    13	
+    14	- `review`: review the current diff against the base branch.
+    15	- `challenge`: adversarial review. Look for production failure modes, race
+    16	  conditions, security holes, resource leaks, and silent data corruption.
+    17	- `plan`: review a spec or implementation plan for blocking issues.
+    18	- `consult`: ask a focused question about the repo.
+    19	- `complexity`: over-engineering hunt. Finds what to delete: reinvented
+    20	  standard library, unneeded dependencies, speculative abstractions, dead
+    21	  flexibility. One line per finding: location, what to cut, what replaces it.
+    22	
+    23	Default to `review` when there is a diff. Default to `plan` when the user points at
+    24	a spec or plan. Use `challenge` for money movement, auth, security, exchange
+    25	adapters, state machines, live-smoke paths, and release blockers. Use `complexity`
+    26	when the user asks what can be deleted, simplified, or whether something is
+    27	over-engineered.
+    28	
+    29	## When to Request
+    30	
+    31	Request an outside review when: completing a task or major feature, before merging, or before any security/auth/payments/live-risk change. Reviewing your own work in the same context is not a substitute — the point is an independent lane.
+    32	
+    33	## Red Flags (review-avoidance rationalizations)
+    34	
+    35	| Thought | Reality |
+    36	|---|---|
+    37	| "It's a small change, skip review" | Small diffs hide the costliest bugs. Request it. |
+    38	| "I already checked it myself" | Self-review in the authoring context is not independent. |
+    39	| "Tests pass, so it's fine" | Tests prove what you thought to test, not what you missed. |
+    40	| "Review will slow me down" | A closed PR slows you down more. |
+    41	
+    42	## Host Routing
+    43	
+    44	Use the opposite reviewer:
+    45	
+    46	- Running in Codex: call local Claude Code CLI with `claude -p`.
+    47	- Running in Claude Code: call local Codex CLI with `codex review` or `codex exec`.
+    48	- If host is unclear, infer from available runtime context. If still unclear and
+    49	  both CLIs exist, prefer the reviewer not already driving the current session.
+    50	
+    51	Do not ask both reviewers by default. The point is independence, not consensus theater.
+    52	
+    53	## Prompt Boundary
+    54	
+    55	Prefix every outside-review prompt with:
+   228	```
+   229	
+   230	Show raw reviewer output first, then a short triage. Do not implement accepted
+   231	fixes unless the workflow has reached a step where edits are allowed.
+   232	
+   233	## Review Report
+   234	
+   235	When a spec, plan, or CURRENT file is active, add or update:
+   236	
+   237	```markdown
+   238	## JSTACK REVIEW REPORT
+   239	
+   240	| Check | Reviewer | Runs | Status | Findings | Artifact |
+   241	|---|---|---:|---|---|---|
+   242	| Peer Review | <codex|claude> | 1 | <Pass|Issues Found> | <summary> | <path> |
+   243	| Adversarial Review | <codex|claude> | 0 | Pending | - | - |
+   244	```
+   245	
+   246	Preserve existing rows. Append missing rows. If no active file is obvious, only
+   247	write the artifact and mention where it was saved.
+   248	
+   249	## Finding Triage
+   250	
+   251	External feedback is not an order. Before applying it:
+   252	
+   253	1. Verify the finding against code, tests, logs, or docs.
+   254	2. Reject findings that contradict repo invariants or add unused scope.
+   255	3. Escalate product, architecture, live-risk, or funding-impact decisions.
+   256	4. Apply accepted fixes one at a time with targeted tests.
+   257	
+   258	For live trading, movement, signer, exchange, deployment, or credential changes,
+   259	do not proceed from review to live execution without explicit user confirmation.
+224:## Triage
+230:Show raw reviewer output first, then a short triage. Do not implement accepted
+249:## Finding Triage
+251:External feedback is not an order. Before applying it:
+253:1. Verify the finding against code, tests, logs, or docs.
+
+hook: PostToolUse
+hook: PostToolUse Completed
+hook: PreToolUse
+hook: PreToolUse Completed
+exec
+/bin/zsh -lc "nl -ba GEMINI.md | sed -n '1,180p'
+find .opencode -maxdepth 3 -type f -print -exec sh -c 'for f do nl -ba \""'$f" | sed -n "1,180p"; done'"' sh {} + 2>/dev/null" in /Users/kakao1/.codex/jstack
+ succeeded in 0ms:
+     1	@./skills/using-jstack/SKILL.md
+     2	@./skills/using-jstack/references/gemini-tools.md
+.opencode/plugins/jstack.js
+.opencode/plugins/superpowers.js
+.opencode/INSTALL.md
+     1	export { SuperpowersPlugin as JStackPlugin } from './superpowers.js';
+     1	/**
+     2	 * JStack plugin for OpenCode.ai
+     3	 *
+     4	 * Injects JStack bootstrap context via system prompt transform.
+     5	 * Auto-registers skills directory via config hook (no symlinks needed).
+     6	 */
+     7	
+     8	import path from 'path';
+     9	import fs from 'fs';
+    10	import os from 'os';
+    11	import { fileURLToPath } from 'url';
+    12	
+    13	const __dirname = path.dirname(fileURLToPath(import.meta.url));
+    14	
+    15	// Simple frontmatter extraction (avoid dependency on skills-core for bootstrap)
+    16	const extractAndStripFrontmatter = (content) => {
+    17	  const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+    18	  if (!match) return { frontmatter: {}, content };
+    19	
+    20	  const frontmatterStr = match[1];
+    21	  const body = match[2];
+    22	  const frontmatter = {};
+    23	
+    24	  for (const line of frontmatterStr.split('\n')) {
+    25	    const colonIdx = line.indexOf(':');
+    26	    if (colonIdx > 0) {
+    27	      const key = line.slice(0, colonIdx).trim();
+    28	      const value = line.slice(colonIdx + 1).trim().replace(/^["']|["']$/g, '');
+    29	      frontmatter[key] = value;
+    30	    }
+    31	  }
+    32	
+    33	  return { frontmatter, content: body };
+    34	};
+    35	
+    36	// Normalize a path: trim whitespace, expand ~, resolve to absolute
+    37	const normalizePath = (p, homeDir) => {
+    38	  if (!p || typeof p !== 'string') return null;
+    39	  let normalized = p.trim();
+    40	  if (!normalized) return null;
+    41	  if (normalized.startsWith('~/')) {
+    42	    normalized = path.join(homeDir, normalized.slice(2));
+    43	  } else if (normalized === '~') {
+    44	    normalized = homeDir;
+    45	  }
+    46	  return path.resolve(normalized);
+    47	};
+    48	
+    49	export const SuperpowersPlugin = async ({ client, directory }) => {
+    50	  const homeDir = os.homedir();
+    51	  const jstackSkillsDir = path.resolve(__dirname, '../../skills');
+    52	  const envConfigDir = normalizePath(process.env.OPENCODE_CONFIG_DIR, homeDir);
+    53	  const configDir = envConfigDir || path.join(homeDir, '.config/opencode');
+    54	
+    55	  // Helper to generate bootstrap content
+    56	  const getBootstrapContent = () => {
+    57	    // Try to load using-jstack skill
+    58	    const skillPath = path.join(jstackSkillsDir, 'using-jstack', 'SKILL.md');
+    59	    if (!fs.existsSync(skillPath)) return null;
+    60	
+    61	    const fullContent = fs.readFileSync(skillPath, 'utf8');
+    62	    const { content } = extractAndStripFrontmatter(fullContent);
+    63	
+    64	    const toolMapping = `**Tool Mapping for OpenCode:**
+    65	When skills reference tools you don't have, substitute OpenCode equivalents:
+    66	- \`TodoWrite\` → \`todowrite\`
+    67	- \`Task\` tool with subagents → Use OpenCode's subagent system (@mention)
+    68	- \`Skill\` tool → OpenCode's native \`skill\` tool
+    69	- \`Read\`, \`Write\`, \`Edit\`, \`Bash\` → Your native tools
+    70	
+    71	Use OpenCode's native \`skill\` tool to list and load skills.`;
+    72	
+    73	    return `<EXTREMELY_IMPORTANT>
+    74	You have JStack.
+    75	
+    76	**IMPORTANT: The using-jstack skill content is included below. It is ALREADY LOADED - you are currently following it. Do NOT use the skill tool to load "using-jstack" again - that would be redundant.**
+    77	
+    78	${content}
+    79	
+    80	${toolMapping}
+    81	</EXTREMELY_IMPORTANT>`;
+    82	  };
+    83	
+    84	  return {
+    85	    // Inject skills path into live config so OpenCode discovers JStack skills
+    86	    // without requiring manual symlinks or config file edits.
+    87	    // This works because Config.get() returns a cached singleton — modifications
+    88	    // here are visible when skills are lazily discovered later.
+    89	    config: async (config) => {
+    90	      config.skills = config.skills || {};
+    91	      config.skills.paths = config.skills.paths || [];
+    92	      if (!config.skills.paths.includes(jstackSkillsDir)) {
+    93	        config.skills.paths.push(jstackSkillsDir);
+    94	      }
+    95	    },
+    96	
+    97	    // Inject bootstrap into the first user message of each session.
+    98	    // Using a user message instead of a system message avoids:
+    99	    //   1. Token bloat from system messages repeated every turn (#750)
+   100	    //   2. Multiple system messages breaking Qwen and other models (#894)
+   101	    'experimental.chat.messages.transform': async (_input, output) => {
+   102	      const bootstrap = getBootstrapContent();
+   103	      if (!bootstrap || !output.messages.length) return;
+   104	      const firstUser = output.messages.find(m => m.info.role === 'user');
+   105	      if (!firstUser || !firstUser.parts.length) return;
+   106	      // Only inject once
+   107	      if (firstUser.parts.some(p => p.type === 'text' && p.text.includes('EXTREMELY_IMPORTANT'))) return;
+   108	      const ref = firstUser.parts[0];
+   109	      firstUser.parts.unshift({ ...ref, type: 'text', text: bootstrap });
+   110	    }
+   111	  };
+   112	};
+     1	# Installing Superpowers for OpenCode
+     2	
+     3	## Prerequisites
+     4	
+     5	- [OpenCode.ai](https://opencode.ai) installed
+     6	
+     7	## Installation
+     8	
+     9	Add superpowers to the `plugin` array in your `opencode.json` (global or project-level):
+    10	
+    11	```json
+    12	{
+    13	  "plugin": ["superpowers@git+https://github.com/obra/superpowers.git"]
+    14	}
+    15	```
+    16	
+    17	Restart OpenCode. That's it — the plugin auto-installs and registers all skills.
+    18	
+    19	Verify by asking: "Tell me about your superpowers"
+    20	
+    21	## Migrating from the old symlink-based install
+    22	
+    23	If you previously installed superpowers using `git clone` and symlinks, remove the old setup:
+    24	
+    25	```bash
+    26	# Remove old symlinks
+    27	rm -f ~/.config/opencode/plugins/superpowers.js
+    28	rm -rf ~/.config/opencode/skills/superpowers
+    29	
+    30	# Optionally remove the cloned repo
+    31	rm -rf ~/.config/opencode/superpowers
+    32	
+    33	# Remove skills.paths from opencode.json if you added one for superpowers
+    34	```
+    35	
+    36	Then follow the installation steps above.
+    37	
+    38	## Usage
+    39	
+    40	Use OpenCode's native `skill` tool:
+    41	
+    42	```
+    43	use skill tool to list skills
+    44	use skill tool to load superpowers/brainstorming
+    45	```
+    46	
+    47	## Updating
+    48	
+    49	Superpowers updates automatically when you restart OpenCode.
+    50	
+    51	To pin a specific version:
+    52	
+    53	```json
+    54	{
+    55	  "plugin": ["superpowers@git+https://github.com/obra/superpowers.git#v5.0.3"]
+    56	}
+    57	```
+    58	
+    59	## Troubleshooting
+    60	
+    61	### Plugin not loading
+    62	
+    63	1. Check logs: `opencode run --print-logs "hello" 2>&1 | grep -i superpowers`
+    64	2. Verify the plugin line in your `opencode.json`
+    65	3. Make sure you're running a recent version of OpenCode
+    66	
+    67	### Skills not found
+    68	
+    69	1. Use `skill` tool to list what's discovered
+    70	2. Check that the plugin is loading (see above)
+    71	
+    72	### Tool mapping
+    73	
+    74	When skills reference Claude Code tools:
+    75	- `TodoWrite` → `todowrite`
+    76	- `Task` with subagents → `@mention` syntax
+    77	- `Skill` tool → OpenCode's native `skill` tool
+    78	- File operations → your native tools
+    79	
+    80	## Getting Help
+    81	
+    82	- Report issues: https://github.com/obra/superpowers/issues
+    83	- Full documentation: https://github.com/obra/superpowers/blob/main/docs/README.opencode.md
+
+hook: PostToolUse
+hook: PostToolUse Completed
+codex
+BLOCKING — the plan cannot meet its release and verification gates as written.
+
+- **BLOCKING** — [docs/jstack/specs/2026-07-20-adhd-integration-design.md:60](/Users/kakao1/.codex/jstack/docs/jstack/specs/2026-07-20-adhd-integration-design.md:60), [skills/writing-skills/SKILL.md:374](/Users/kakao1/.codex/jstack/skills/writing-skills/SKILL.md:374): Workstreams 1–2 modify behavior-shaping skills without the mandatory pre-edit failing pressure scenarios and post-edit compliance reruns, so their behavioral effect cannot be accepted.
+
+- **BLOCKING** — [docs/jstack/specs/2026-07-20-adhd-integration-design.md:63](/Users/kakao1/.codex/jstack/docs/jstack/specs/2026-07-20-adhd-integration-design.md:63), [tests/jstack-static/run.sh:46](/Users/kakao1/.codex/jstack/tests/jstack-static/run.sh:46), [tests/skill-triggering/run-all.sh:14](/Users/kakao1/.codex/jstack/tests/skill-triggering/run-all.sh:14): Deleting `requesting-code-review` and archiving `dispatching-parallel-agents` leaves existing tests targeting missing skills, making the stated “existing tests pass” gate impossible.
+
+- **HIGH** — [docs/jstack/specs/2026-07-20-adhd-integration-design.md:33](/Users/kakao1/.codex/jstack/docs/jstack/specs/2026-07-20-adhd-integration-design.md:33), [hooks/hooks.json:5](/Users/kakao1/.codex/jstack/hooks/hooks.json:5), [.codex/INSTALL.md:3](/Users/kakao1/.codex/jstack/.codex/INSTALL.md:3): The “all harnesses, once per session” claim is unsupported because Claude reinjects on `clear` and `compact`, while Codex, Gemini, and OpenCode use separate delivery mechanisms absent from the verification plan.
+
+- **HIGH** — [docs/jstack/specs/2026-07-20-adhd-integration-design.md:26](/Users/kakao1/.codex/jstack/docs/jstack/specs/2026-07-20-adhd-integration-design.md:26), [skills/requesting-code-review/SKILL.md:8](/Users/kakao1/.codex/jstack/skills/requesting-code-review/SKILL.md:8): Removing the existing 66-word compatibility redirect in a minor release makes explicit `jstack:requesting-code-review` callers fail while providing negligible consolidation benefit.
+
+- **HIGH** — [docs/jstack/specs/2026-07-20-adhd-integration-design.md:28](/Users/kakao1/.codex/jstack/docs/jstack/specs/2026-07-20-adhd-integration-design.md:28), [commands/brainstorm.md:5](/Users/kakao1/.codex/jstack/commands/brainstorm.md:5): Deleting the deprecated commands in 5.6.0 violates their published promise of removal in the next major release, breaking users before the announced compatibility boundary.
+hook: Stop
+hook: Stop Completed
+tokens used
+84,176
+BLOCKING — the plan cannot meet its release and verification gates as written.
+
+- **BLOCKING** — [docs/jstack/specs/2026-07-20-adhd-integration-design.md:60](/Users/kakao1/.codex/jstack/docs/jstack/specs/2026-07-20-adhd-integration-design.md:60), [skills/writing-skills/SKILL.md:374](/Users/kakao1/.codex/jstack/skills/writing-skills/SKILL.md:374): Workstreams 1–2 modify behavior-shaping skills without the mandatory pre-edit failing pressure scenarios and post-edit compliance reruns, so their behavioral effect cannot be accepted.
+
+- **BLOCKING** — [docs/jstack/specs/2026-07-20-adhd-integration-design.md:63](/Users/kakao1/.codex/jstack/docs/jstack/specs/2026-07-20-adhd-integration-design.md:63), [tests/jstack-static/run.sh:46](/Users/kakao1/.codex/jstack/tests/jstack-static/run.sh:46), [tests/skill-triggering/run-all.sh:14](/Users/kakao1/.codex/jstack/tests/skill-triggering/run-all.sh:14): Deleting `requesting-code-review` and archiving `dispatching-parallel-agents` leaves existing tests targeting missing skills, making the stated “existing tests pass” gate impossible.
+
+- **HIGH** — [docs/jstack/specs/2026-07-20-adhd-integration-design.md:33](/Users/kakao1/.codex/jstack/docs/jstack/specs/2026-07-20-adhd-integration-design.md:33), [hooks/hooks.json:5](/Users/kakao1/.codex/jstack/hooks/hooks.json:5), [.codex/INSTALL.md:3](/Users/kakao1/.codex/jstack/.codex/INSTALL.md:3): The “all harnesses, once per session” claim is unsupported because Claude reinjects on `clear` and `compact`, while Codex, Gemini, and OpenCode use separate delivery mechanisms absent from the verification plan.
+
+- **HIGH** — [docs/jstack/specs/2026-07-20-adhd-integration-design.md:26](/Users/kakao1/.codex/jstack/docs/jstack/specs/2026-07-20-adhd-integration-design.md:26), [skills/requesting-code-review/SKILL.md:8](/Users/kakao1/.codex/jstack/skills/requesting-code-review/SKILL.md:8): Removing the existing 66-word compatibility redirect in a minor release makes explicit `jstack:requesting-code-review` callers fail while providing negligible consolidation benefit.
+
+- **HIGH** — [docs/jstack/specs/2026-07-20-adhd-integration-design.md:28](/Users/kakao1/.codex/jstack/docs/jstack/specs/2026-07-20-adhd-integration-design.md:28), [commands/brainstorm.md:5](/Users/kakao1/.codex/jstack/commands/brainstorm.md:5): Deleting the deprecated commands in 5.6.0 violates their published promise of removal in the next major release, breaking users before the announced compatibility boundary.
