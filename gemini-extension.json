@@ -1,6 +1,6 @@
 {
   "name": "jstack",
   "description": "Local skills library: planning, TDD, peer review, debugging, and delivery workflows",
-  "version": "5.5.1",
+  "version": "6.0.0",
   "contextFileName": "GEMINI.md"
 }

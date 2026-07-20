@@ -1,5 +1,18 @@
 # Superpowers Release Notes
 
+## v6.0.0 (2026-07-20)
+
+### ADHD Output Contract (JEP-495)
+
+- **using-jstack** — new `## Output Contract` section, adapted from [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd) (MIT). Applies to **conversational and status output only** — artifacts (specs, plans, docs, commit messages, review reports) keep their owning skill's fidelity requirements. Verdict-first, numbered steps, ≤5-item lists, end-of-turn "current position → next step" line with Linear issue ID during multi-step work, S/M/L sizing instead of time estimates, no closing filler. Delivered to Claude Code via the session-start hook injection and to Codex/Gemini/OpenCode via native skill discovery.
+
+### Breaking: skill cleanup
+
+- **requesting-code-review** (redirect stub) and **receiving-code-review** removed — both consolidated into **peer-review** (`## When to Request`, `## Receiving Review Feedback`). Explicit callers should invoke `jstack:peer-review`.
+- **dispatching-parallel-agents** archived to `archive/skills/` — native harness parallel dispatch replaces it; `subagent-driven-development` covers the orchestration case.
+- Deprecated commands `brainstorm`, `write-plan`, `execute-plan` removed, fulfilling the "next major release" removal promise.
+- Trigger/static tests rewired accordingly; fixed pre-existing skill-triggering harness bugs (macOS `timeout`, `--verbose` for stream-json).
+
 ## v5.5.0 (2026-07-05)
 
 ### Orca Worktree & Linear Integration
