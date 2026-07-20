@@ -246,6 +246,28 @@ When a spec, plan, or CURRENT file is active, add or update:
 Preserve existing rows. Append missing rows. If no active file is obvious, only
 write the artifact and mention where it was saved.
 
+## Receiving Review Feedback
+
+When feedback arrives — from your human partner, a peer reviewer, or GitHub:
+
+1. READ all items without reacting. If any item is unclear, stop and ask before
+   implementing any of them — items may be related, and partial understanding
+   produces wrong implementations.
+2. VERIFY each claim against codebase reality before implementing.
+3. RESPOND technically. Never performatively agree — no "You're absolutely
+   right!", no "Great point!", no gratitude. State the requirement, ask, push
+   back with evidence, or just fix it: the diff is the acknowledgment.
+4. IMPLEMENT one item at a time — blocking issues, then simple fixes, then
+   complex ones — testing each before the next.
+5. PUSH BACK with technical reasoning when a suggestion breaks existing
+   functionality, lacks context, violates YAGNI (grep for actual usage first),
+   or conflicts with your human partner's architectural decisions. If you
+   pushed back and were wrong, state the correction factually and move on.
+
+For GitHub inline review comments, reply in the comment thread
+(`gh api repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies`), not as a
+top-level PR comment.
+
 ## Finding Triage
 
 External feedback is not an order. Before applying it:

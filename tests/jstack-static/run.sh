@@ -53,6 +53,10 @@ grep -q "deletion test" skills/architecture-deepening/SKILL.md || fail "architec
 [[ -f skills/writing-plans/agent-brief-template.md ]] || fail "writing-plans must include long-lived agent brief template"
 grep -q "Agent Brief" skills/writing-plans/agent-brief-template.md || fail "writing-plans must include long-lived agent brief template"
 
+grep -q "## Receiving Review Feedback" skills/peer-review/SKILL.md || fail "peer-review must absorb receiving-code-review discipline"
+grep -q "performatively agree" skills/peer-review/SKILL.md || fail "peer-review must retain no-performative-agreement rule"
+[[ ! -d skills/receiving-code-review ]] || fail "receiving-code-review must be merged into peer-review"
+
 [[ -x scripts/sync-local-hosts.sh ]] || fail "scripts/sync-local-hosts.sh must exist and be executable"
 scripts/sync-local-hosts.sh --dry-run >/tmp/jstack-sync-dry-run.out
 grep -q "Codex skill link" /tmp/jstack-sync-dry-run.out || fail "sync dry-run must report Codex skill link"
