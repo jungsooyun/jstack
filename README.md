@@ -157,8 +157,7 @@ refreshes.
   `orca worktree rm`.
 
 **Review handling**
-- `requesting-code-review`
-- `receiving-code-review`
+- `peer-review` — requesting and receiving review are consolidated here (6.0.0)
 - `ask-claude` remains available as a legacy direct-Claude helper in the wider
   local skills set, but `peer-review` is the preferred cross-agent path.
 

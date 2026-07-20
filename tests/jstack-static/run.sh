@@ -58,6 +58,10 @@ grep -q "## Receiving Review Feedback" skills/peer-review/SKILL.md || fail "peer
 grep -q "performatively agree" skills/peer-review/SKILL.md || fail "peer-review must retain no-performative-agreement rule"
 [[ ! -d skills/receiving-code-review ]] || fail "receiving-code-review must be merged into peer-review"
 
+[[ ! -d skills/dispatching-parallel-agents ]] || fail "dispatching-parallel-agents must be archived"
+[[ -f archive/skills/dispatching-parallel-agents/SKILL.md ]] || fail "archived dispatching-parallel-agents must be preserved"
+! rg -q --no-messages "dispatching-parallel-agents" skills/ commands/ hooks/ 2>/dev/null || fail "no live references to archived skill"
+
 [[ -x scripts/sync-local-hosts.sh ]] || fail "scripts/sync-local-hosts.sh must exist and be executable"
 scripts/sync-local-hosts.sh --dry-run >/tmp/jstack-sync-dry-run.out
 grep -q "Codex skill link" /tmp/jstack-sync-dry-run.out || fail "sync dry-run must report Codex skill link"
