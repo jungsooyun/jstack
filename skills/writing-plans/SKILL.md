@@ -84,8 +84,18 @@ If unsure between tiers, choose the higher fidelity when mistakes would be expen
 
 **Plan Fidelity:** [Micro Plan | Interface-Level Plan | Full-Code Plan, with one-sentence reason]
 
+**Definition of Done:** [Observable, checkable behavior. Verification checks THIS — not open-ended gap hunting]
+
+**Non-goals:** [What this change deliberately does NOT handle. Reviews and implementation may not expand into these — a needed non-goal becomes a new plan, not scope creep]
+
+**Size Budget:** [Rough ceiling: files touched / LOC. Hitting it = STOP and report to the user, never auto-expand]
+
 ---
 ```
+
+A plan missing Definition of Done, Non-goals, or Size Budget is incomplete —
+these three fields are what keep implementation and review from rabbit-holing
+into unrequested hardening (jstack:simplest-thing is the governing principle).
 
 ## Task Structure
 

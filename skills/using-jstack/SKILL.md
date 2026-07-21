@@ -98,6 +98,13 @@ These thoughts mean STOP—you're rationalizing:
 
 When multiple skills could apply, use this order:
 
+0. **simplest-thing is a standing constraint, not an optional pick** — its ladder
+   (skip/YAGNI → reuse → stdlib → platform → installed dep → one line → minimum code)
+   governs ALL code-writing work regardless of which other skills are active.
+   Invoke it before any implementation, and apply its ladder inside every other
+   skill: plans budget by it, reviews judge against it, subagent prompts carry it.
+   Unrequested safety layers, guards, and abstractions are scope drift — record
+   them as backlog follow-ups, do not build them.
 1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach the task
 2. **Implementation skills second** (frontend-design, mcp-builder) - these guide execution
 

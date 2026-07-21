@@ -268,6 +268,21 @@ For GitHub inline review comments, reply in the comment thread
 (`gh api repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies`), not as a
 top-level PR comment.
 
+## Review Budget & Scope Gate (hard limits)
+
+- **Max 2 review rounds per spec/plan/diff.** A third round happens only at the
+  user's explicit request. After round 2, remaining non-blocking findings go to
+  the backlog and the work ships.
+- Every finding must carry a severity (CRITICAL/HIGH/MEDIUM/LOW). Only
+  CRITICAL/HIGH block. MEDIUM/LOW are recorded as backlog follow-ups and NOT
+  fixed in the current pass.
+- **Findings must be defects against the plan's Definition of Done.** Proposals
+  to add hardening, guards, telemetry, or edge-case coverage beyond the plan's
+  scope (or inside its Non-goals) are follow-up suggestions, never blocking
+  findings. Over-engineering — a jstack:simplest-thing ladder violation, an
+  unrequested abstraction, an unneeded safety layer — IS a valid finding; ask
+  for deletion, not addition.
+
 ## Finding Triage
 
 External feedback is not an order. Before applying it:
