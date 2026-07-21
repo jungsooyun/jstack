@@ -1,5 +1,38 @@
 # Superpowers Release Notes
 
+## v6.1.0 (2026-07-21)
+
+### Simplest-Thing as Governing Principle (ponytail absorption)
+
+Root-cause response to review-loop rabbit-holing observed in the hummingbot repo
+(JEP-455: 198 commits, +43k LOC for a REST rate-limit feature; 27% of recent
+commits were `close gaps`/`harden`/`rereview` loop artifacts). The pipeline
+enforced "do more" (review, verify, close gaps) while simplest-thing stayed an
+optional skill — this release makes it binding.
+
+- **using-jstack** — Skill Priority gains rung 0: `simplest-thing` is a
+  **standing constraint**, not an optional pick. Its ladder (skip/YAGNI → reuse
+  → stdlib → platform → installed dep → one line → minimum code) governs all
+  code-writing work inside every other skill; unrequested safety layers,
+  guards, and abstractions are scope drift recorded as backlog follow-ups.
+  This completes the ponytail (DietrichGebert/ponytail) absorption — the
+  ladder content already lived in `simplest-thing`; now it has pipeline teeth.
+- **writing-plans** — plan header gains three REQUIRED fields: **Definition of
+  Done** (observable, checkable), **Non-goals** (reviews/implementation may not
+  expand into these), **Size Budget** (hitting it = stop and report, never
+  auto-expand). A plan missing any of the three is incomplete.
+- **peer-review** — new **Review Budget & Scope Gate** (hard limits): max 2
+  review rounds per spec/plan/diff (round 3 only at the user's explicit
+  request); every finding carries a severity; only CRITICAL/HIGH block;
+  MEDIUM/LOW go to the backlog unfixed. Findings must be defects against the
+  plan's Definition of Done — proposals to add hardening/telemetry/edge-case
+  coverage beyond plan scope are follow-ups, never blocking findings.
+  Over-engineering is itself a valid finding: ask for deletion, not addition.
+
+Note: 6.1.0 was previously penciled in for the JEP-495 token-diet workstream;
+that work moves to a later release. This release ships alone so behavior
+regressions bisect cleanly.
+
 ## v6.0.0 (2026-07-20)
 
 ### ADHD Output Contract (JEP-495)
